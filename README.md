@@ -3,7 +3,7 @@
 OpenXR Explorer is a handy debug tool for OpenXR developers. It allows for easy switching between OpenXR runtimes, shows lists of the runtime's supported extensions, and allows for inspection of common properties and enumerations, with direct links to relevant parts of the OpenXR specification!
 
 ## Download
-Get the latest pre-compiled binaries over in [the releases tab](/releases)!
+Get the latest pre-compiled binaries over in [the releases tab](https://github.com/maluoi/openxr-explorer/releases)!
 
 ## Features
 ### Runtime Switching
@@ -24,7 +24,7 @@ It can be handy to know what to expect when requesting data from OpenXR! This to
 Just about everything you see in the GUI is also available in text format when used from the command line! If you provide the openxr-explorer application with function or type names as arguments, it'll just dump the results as text to the console instead of launching the GUI. Who needs this? I don't know! I sure didn't, but I hope someone else does :)
 
 ### Building
-If you just want to use it, see the [Releases](/releases) tab! If you want to build it or modify it, then OpenXR Explorer uses cmake. Note that this repository uses git submodules, so make sure that's all downloaded!
+If you just want to use it, see the [Releases](https://github.com/maluoi/openxr-explorer/releases) tab! If you want to build it or modify it, then OpenXR Explorer uses cmake. Note that this repository uses git submodules, so make sure that's all downloaded!
 
 #### Windows
 From the root directory:
