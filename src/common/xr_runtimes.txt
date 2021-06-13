@@ -1,0 +1,4 @@
+windows WMR C:\WINDOWS\system32\MixedRealityRuntime.json
+windows Oculus C:\Program Files\Oculus\Support\oculus-runtime\oculus_openxr_64.json
+windows SteamVR C:\Program Files (x86)\Steam\steamapps\common\SteamVR\steamxr_win64.json
+windows Varjo C:\Program Files\Varjo\varjo-openxr\VarjoOpenXR.json
