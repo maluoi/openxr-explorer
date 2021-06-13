@@ -71,8 +71,7 @@ bool app_init() {
 	colors[ImGuiCol_ButtonHovered] = colors[ImGuiCol_ResizeGripHovered] = colors[ImGuiCol_HeaderHovered]      = colors[ImGuiCol_TabHovered] = colors[ImGuiCol_FrameBgHovered] = hover;
 	colors[ImGuiCol_TableRowBgAlt] = colors[ImGuiCol_TitleBgActive] = barely;
  
-	if (!load_runtimes("xr_runtimes.txt", &runtimes, &runtime_count))
-		return false;
+	load_runtimes("xr_runtimes.txt", &runtimes, &runtime_count);
 
 	app_xr_settings.allow_session = true;
 	app_xr_settings.form          = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
