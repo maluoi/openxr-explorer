@@ -8,9 +8,6 @@ find_package(OpenXR REQUIRED)
 find_package(X11 REQUIRED)
 find_package(GLEW REQUIRED)
 
-include_directories(../common)
-include_directories(${OPENXR_OPENXR_INCLUDE_DIR})
-
 add_executable(openxr-explorer 
     main.cpp
     openxr_info.h
@@ -40,6 +37,11 @@ add_executable(openxr-explorer
     imgui/imstb_truetype.h
     imgui/sk_gpu.h
     imgui/sokol_time.h)
+
+target_include_directories(openxr-explorer PRIVATE
+    ../common
+    ${OPENXR_OPENXR_INCLUDE_DIR})
+
 target_link_libraries(openxr-explorer 
     xrruntime 
     openxr_loader
