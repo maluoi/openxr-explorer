@@ -5,6 +5,8 @@ project(openxr-explorer VERSION 1.0
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 
 find_package(OpenXR REQUIRED)
+find_package(X11 REQUIRED)
+find_package(GLEW REQUIRED)
 
 include_directories(../common)
 include_directories(${OPENXR_OPENXR_INCLUDE_DIR})
@@ -25,6 +27,8 @@ add_executable(openxr-explorer
     imgui/imgui_impl_skg.cpp
     imgui/imgui_impl_win32.h
     imgui/imgui_impl_win32.cpp
+    imgui/imgui_impl_x11.h
+    imgui/imgui_impl_x11.cpp
     imgui/imgui_internal.h
     imgui/imgui_shader.hlsl.h
     imgui/imgui_skg.h
@@ -36,4 +40,18 @@ add_executable(openxr-explorer
     imgui/imstb_truetype.h
     imgui/sk_gpu.h
     imgui/sokol_time.h)
-target_link_libraries(openxr-explorer xrruntime openxr_loader)
+target_link_libraries(openxr-explorer 
+    xrruntime 
+    openxr_loader
+    X11
+    X11-xcb
+    ${X11_LIBRARIES}
+    xcb
+    xcb-xkb
+    xcb-randr
+    xcb-xfixes
+    xcb-cursor
+    xcb-keysyms
+    GL
+    GLEW
+    GLX)

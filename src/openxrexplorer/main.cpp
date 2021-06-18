@@ -1,6 +1,4 @@
 #include "imgui/imgui_skg.h"
-#include "imgui/sk_gpu.h"
-#include "array.h"
 #include "xrruntime.h"
 #include "openxr_info.h"
 #include "app_cli.h"
@@ -9,16 +7,6 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-#if defined(SKG_DIRECT3D11)
-#define XR_USE_GRAPHICS_API_D3D11
-#elif defined(SKG_OPENGL)
-#define XR_USE_GRAPHICS_API_OPENGL
-#endif
-
-#include <openxr/openxr.h>
-#include <openxr/openxr_platform.h>
-#include <openxr/openxr_reflection.h>
 
 /*** Global Variables ********************/
 
@@ -267,7 +255,7 @@ void app_element_table(const display_table_t *table) {
 			if (ImGui::BeginTable(table->name_type, 1, flags)) {
 				ImGui::TableNextRow();
 				ImGui::TableNextColumn();
-				ImGui::Text(table->error);
+				ImGui::Text("%s", table->error);
 
 				ImGui::EndTable();
 			}
@@ -288,7 +276,7 @@ void app_element_table(const display_table_t *table) {
 							app_open_spec(table->cols[c][i].spec);
 						ImGui::PopID();
 					} else {
-						ImGui::Text(table->cols[c][i].text);
+						ImGui::Text("%s", table->cols[c][i].text);
 					}
 				}
 			}
@@ -308,8 +296,11 @@ void app_element_table(const display_table_t *table) {
 
 ///////////////////////////////////////////
 
+#if defined(_WIN32)
+
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <shellapi.h>
 void app_set_runtime(int32_t runtime_index) {
 	char command[1024];
 	snprintf(command, sizeof(command), " -%s", runtimes[runtime_index].name);
@@ -333,6 +324,17 @@ void app_set_runtime(int32_t runtime_index) {
 		openxr_info_reload(app_xr_settings);
 	}
 }
+
+#elif defined(__linux__)
+
+void app_set_runtime(int32_t runtime_index) {
+	char command[1024];
+	snprintf(command, sizeof(command), "xrsetruntime -%s", runtimes[runtime_index].name);
+
+	system(command);
+}
+
+#endif
 
 ///////////////////////////////////////////
 

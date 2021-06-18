@@ -106,7 +106,7 @@ void cli_print_table(const display_table_t *table) {
 	for (size_t i = table->header_row ? 1 : 0; i < table->cols[0].count; i++) {
 		printf("| ");
 		for (size_t c = 0; c < table->column_count; c++) {
-			printf("%-*s", max[c], table->cols[c][i].text ? table->cols[c][i].text : "");
+			printf("%-*s", (int32_t)max[c], table->cols[c][i].text ? table->cols[c][i].text : "");
 			if (c != table->column_count-1)
 				printf(" | ");
 		}

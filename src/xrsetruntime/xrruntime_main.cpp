@@ -107,6 +107,8 @@ int32_t strcmp_nocase(char const *a, char const *b) {
 
 ///////////////////////////////////////////
 
+#if defined(_WIN32)
+
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 bool activate_runtime(int32_t index) {
@@ -134,3 +136,11 @@ bool activate_runtime(int32_t index) {
 	RegCloseKey(key);
 	return true;
 }
+
+#elif defined(__linux__)
+
+bool activate_runtime(int32_t index) {
+	return false;
+}
+
+#endif

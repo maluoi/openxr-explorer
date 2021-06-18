@@ -1,8 +1,9 @@
 #include "xrruntime.h"
 
 #include <stdio.h>
+#include <string.h>
+#include <malloc.h>
 #include <sys/stat.h>
-#include <windows.h>
 
 /*** Signatures **************************/
 

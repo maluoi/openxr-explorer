@@ -1,5 +1,9 @@
 #include "openxr_info.h"
 
+#if defined(__linux__)
+#include <GL/glxew.h>
+#endif
+
 #include <openxr/openxr_platform.h>
 #include <openxr/openxr_reflection.h>
 
@@ -152,8 +156,8 @@ void openxr_init_instance(array_t<XrExtensionProperties> extensions) {
 	create_info.enabledExtensionNames = exts.data;
 	create_info.enabledApiLayerCount  = 0;
 	create_info.enabledApiLayerNames  = nullptr;
-	create_info.applicationInfo.applicationVersion = XR_MAKE_VERSION(1, 0, 0);
-	create_info.applicationInfo.engineVersion      = XR_MAKE_VERSION(1, 0, 0);
+	create_info.applicationInfo.applicationVersion = 1;
+	create_info.applicationInfo.engineVersion      = 1;
 	create_info.applicationInfo.apiVersion         = XR_CURRENT_API_VERSION;
 	snprintf(create_info.applicationInfo.applicationName, sizeof(create_info.applicationInfo.applicationName), "%s", "OpenXR Explorer");
 	snprintf(create_info.applicationInfo.engineName,      sizeof(create_info.applicationInfo.engineName     ), "None");
@@ -197,18 +201,17 @@ void openxr_init_session() {
 		return;
 
 	skg_platform_data_t platform = skg_get_platform_data();
-#if defined(XR_USE_PLATFORM_XLIB)
+#if defined(SKG_OPENGL) && defined(__linux__)
 	XrGraphicsBindingOpenGLXlibKHR gfx_binding = { XR_TYPE_GRAPHICS_BINDING_OPENGL_XLIB_KHR };
 	gfx_binding.xDisplay    = (Display*  )platform._x_display;
 	gfx_binding.visualid    = *(uint32_t *)platform._visual_id;
 	gfx_binding.glxFBConfig = (GLXFBConfig)platform._glx_fb_config;
 	gfx_binding.glxDrawable = (GLXDrawable)platform._glx_drawable;
 	gfx_binding.glxContext  = (GLXContext )platform._glx_context;
-#elif defined(XR_USE_GRAPHICS_API_OPENGL_ES)
-	XrGraphicsBindingOpenGLESAndroidKHR gfx_binding = { XR_TYPE_GRAPHICS_BINDING_OPENGL_ES_ANDROID_KHR };
-	gfx_binding.display = (EGLDisplay)platform._egl_display;
-	gfx_binding.config  = (EGLConfig )platform._egl_config;
-	gfx_binding.context = (EGLContext)platform._egl_context;
+#elif defined(SKG_OPENGL) && defined(_WIN32)
+	XrGraphicsBindingOpenGLKHR gfx_binding = { XR_TYPE_GRAPHICS_BINDING_OPENGL_KHR };
+	gfx_binding.hDC   = (HDC  )platform._gl_hdc;
+	gfx_binding.hGLRC = (HGLRC)platform._gl_hrc;
 #elif defined(XR_USE_GRAPHICS_API_D3D11)
 	PFN_xrGetD3D11GraphicsRequirementsKHR ext_xrGetD3D11GraphicsRequirementsKHR;
 	XrGraphicsRequirementsD3D11KHR        requirement = { XR_TYPE_GRAPHICS_REQUIREMENTS_D3D11_KHR };
