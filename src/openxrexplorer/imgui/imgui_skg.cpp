@@ -242,7 +242,10 @@ bool shell_create_window() {
 		xcb_connection, XCB_COPY_FROM_PARENT, xcb_window, xcb_screen->root,
 		0, 0, sk_width, sk_height, 0, XCB_WINDOW_CLASS_INPUT_OUTPUT,
 		visual_id, valuemask, valuelist );
-
+	xcb_change_property(
+		xcb_connection, XCB_PROP_MODE_REPLACE, xcb_window,
+		XCB_ATOM_WM_NAME, XCB_ATOM_STRING,
+		8, strlen(app_name), app_name);
 	xcb_map_window(xcb_connection, xcb_window);
 
 	GLXWindow glx_window = glXCreateWindow( x_display, fb_config, xcb_window, 0 );
