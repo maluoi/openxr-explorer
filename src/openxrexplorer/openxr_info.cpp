@@ -202,12 +202,24 @@ void openxr_init_session() {
 
 	skg_platform_data_t platform = skg_get_platform_data();
 #if defined(SKG_OPENGL) && defined(__linux__)
-	XrGraphicsBindingOpenGLXlibKHR gfx_binding = { XR_TYPE_GRAPHICS_BINDING_OPENGL_XLIB_KHR };
+	PFN_xrGetOpenGLGraphicsRequirementsKHR ext_xrGetOpenGLGraphicsRequirementsKHR;
+	XrGraphicsRequirementsOpenGLKHR        requirement = { XR_TYPE_GRAPHICS_REQUIREMENTS_OPENGL_KHR };
+	XrGraphicsBindingOpenGLXlibKHR         gfx_binding = { XR_TYPE_GRAPHICS_BINDING_OPENGL_XLIB_KHR };
 	gfx_binding.xDisplay    = (Display*  )platform._x_display;
 	gfx_binding.visualid    = *(uint32_t *)platform._visual_id;
 	gfx_binding.glxFBConfig = (GLXFBConfig)platform._glx_fb_config;
 	gfx_binding.glxDrawable = (GLXDrawable)platform._glx_drawable;
 	gfx_binding.glxContext  = (GLXContext )platform._glx_context;
+	xrGetInstanceProcAddr(xr_instance, "xrGetOpenGLGraphicsRequirementsKHR", (PFN_xrVoidFunction *)(&ext_xrGetOpenGLGraphicsRequirementsKHR));
+	ext_xrGetOpenGLGraphicsRequirementsKHR(xr_instance, xr_system_id, &requirement);
+	printf("version min: %d.%d.%d\n", 
+		(int32_t)XR_VERSION_MAJOR(requirement.minApiVersionSupported),
+		(int32_t)XR_VERSION_MINOR(requirement.minApiVersionSupported),
+		(int32_t)XR_VERSION_PATCH(requirement.minApiVersionSupported));
+	printf("version max: %d.%d.%d\n", 
+		(int32_t)XR_VERSION_MAJOR(requirement.maxApiVersionSupported),
+		(int32_t)XR_VERSION_MINOR(requirement.maxApiVersionSupported),
+		(int32_t)XR_VERSION_PATCH(requirement.maxApiVersionSupported));
 #elif defined(SKG_OPENGL) && defined(_WIN32)
 	XrGraphicsBindingOpenGLKHR gfx_binding = { XR_TYPE_GRAPHICS_BINDING_OPENGL_KHR };
 	gfx_binding.hDC   = (HDC  )platform._gl_hdc;

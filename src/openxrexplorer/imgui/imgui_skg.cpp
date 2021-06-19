@@ -6,7 +6,7 @@
 #include <windows.h>
 
 #elif defined(__linux__)
-// libxcb-xfixes0-dev libxcb-cursor-dev libxcb-xkb-dev
+// libxcb-keysyms1-dev, libxcb1-dev, libxcb-xfixes0-dev libxcb-cursor-dev libxcb-xkb-dev
 // libxcb, libxcb-xfixes, libxcb-xkb1 libxcb-cursor0, libxcb-keysyms1 and libxcb-randr0
 #include "imgui_impl_x11.h"
 
@@ -175,59 +175,86 @@ void shell_loop(void (*step)()) {
 
 #elif defined(__linux__)
 
-xcb_connection_t *connection = nullptr;
-xcb_screen_t     *screen     = nullptr;
-xcb_drawable_t    window     = {};
+Display *x_display = nullptr;
+
+GLXDrawable glx_drawable     = {};
+GLint       glx_attributes[] = {
+	GLX_DOUBLEBUFFER,  true,
+	GLX_RED_SIZE,      8,
+	GLX_GREEN_SIZE,    8,
+	GLX_BLUE_SIZE,     8,
+	GLX_ALPHA_SIZE,    8,
+	GLX_DEPTH_SIZE,    16,
+	GLX_RENDER_TYPE,   GLX_RGBA_BIT,
+	GLX_DRAWABLE_TYPE, GLX_PBUFFER_BIT,
+	GLX_X_RENDERABLE,  true,
+	None
+};
+
+xcb_connection_t *xcb_connection = nullptr;
+xcb_screen_t     *xcb_screen     = nullptr;
+xcb_drawable_t    xcb_window     = {};
+
 bool shell_create_window() {
-	Display *dpy = XOpenDisplay(NULL);
+	x_display = XOpenDisplay(nullptr);
+	if (!x_display)
+		return false;
 
-	// Create application window
-	connection = XGetXCBConnection(dpy);//xcb_connect             (NULL, NULL);
-	screen     = xcb_setup_roots_iterator(xcb_get_setup(connection)).data;
-	window     = xcb_generate_id         (connection);
-	uint32_t values[2];
+	xcb_connection = XGetXCBConnection(x_display);
+	if (!xcb_connection)
+		return false;
 
-	values[0] = screen->black_pixel;
-	values[1] =
+	int32_t               default_screen = DefaultScreen(x_display);
+	xcb_screen_iterator_t screen_iter    = xcb_setup_roots_iterator(xcb_get_setup(xcb_connection));
+	for (int32_t i=default_screen; screen_iter.rem && i>0; i--) {
+		xcb_screen_next(&screen_iter);
+	}
+	xcb_screen = screen_iter.data;
+
+	GLXFBConfig *fb_configs = 0;
+	int          config_ct  = 0;
+	fb_configs = glXChooseFBConfig(x_display, default_screen, glx_attributes, &config_ct);
+	if(!fb_configs || config_ct == 0)
+		return false;
+
+	int32_t     visual_id = 0;
+	GLXFBConfig fb_config = fb_configs[0];
+	glXGetFBConfigAttrib(x_display, fb_config, GLX_VISUAL_ID , &visual_id);
+
+	GLXContext glx_context = glXCreateNewContext(x_display, fb_config, GLX_RGBA_TYPE, 0, true);
+	if(!glx_context)
+		return false;
+
+	xcb_colormap_t xcb_colormap = xcb_generate_id(xcb_connection);
+	xcb_window                  = xcb_generate_id(xcb_connection);
+
+	xcb_create_colormap( xcb_connection, XCB_COLORMAP_ALLOC_NONE, xcb_colormap, xcb_screen->root, visual_id );
+	uint32_t eventmask = 
 		XCB_EVENT_MASK_EXPOSURE       | XCB_EVENT_MASK_STRUCTURE_NOTIFY |
 		XCB_EVENT_MASK_KEY_PRESS      | XCB_EVENT_MASK_KEY_RELEASE      |
 		XCB_EVENT_MASK_BUTTON_PRESS   | XCB_EVENT_MASK_BUTTON_RELEASE   |
 		XCB_EVENT_MASK_POINTER_MOTION | XCB_EVENT_MASK_BUTTON_MOTION    |
 		XCB_EVENT_MASK_ENTER_WINDOW   | XCB_EVENT_MASK_LEAVE_WINDOW;
+	uint32_t valuelist[] = { eventmask, xcb_colormap, 0 };
+	uint32_t valuemask   = XCB_CW_EVENT_MASK | XCB_CW_COLORMAP;
 
-	xcb_create_window(connection,
-		XCB_COPY_FROM_PARENT,
-		window,
-		screen->root,
-		0, 0,
-		sk_width, sk_height,
-		10,
-		XCB_WINDOW_CLASS_INPUT_OUTPUT,
-		screen->root_visual,
-		XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK,
-		values);
-	xcb_map_window(connection, window);
-	xcb_flush     (connection);
+	xcb_create_window(
+		xcb_connection, XCB_COPY_FROM_PARENT, xcb_window, xcb_screen->root,
+		0, 0, sk_width, sk_height, 0, XCB_WINDOW_CLASS_INPUT_OUTPUT,
+		visual_id, valuemask, valuelist );
 
-	//GLint                   att[] = { GLX_RGBA, GLX_DEPTH_SIZE, 16, GLX_DOUBLEBUFFER, None };
-	GLint                   fb_att[] = {
-		GLX_DOUBLEBUFFER,  true,
-		GLX_RED_SIZE,      8,
-		GLX_GREEN_SIZE,    8,
-		GLX_BLUE_SIZE,     8,
-		GLX_ALPHA_SIZE,    8,
-		GLX_DEPTH_SIZE,    16,
-		GLX_RENDER_TYPE,   GLX_RGBA_BIT,
-		GLX_DRAWABLE_TYPE, GLX_PBUFFER_BIT,
-		GLX_X_RENDERABLE,  true,
-		None
-	};
+	xcb_map_window(xcb_connection, xcb_window);
 
-	Window       root          = DefaultRootWindow(dpy);
-	int          config_number = 0;
-	GLXFBConfig  fbconfig      = *glXChooseFBConfig((Display *) dpy, 0, fb_att, &config_number);
-	XVisualInfo *vi            =  glXGetVisualFromFBConfig(dpy, fbconfig);
-	skg_setup_xlib(dpy, vi, fbconfig, nullptr);
+	GLXWindow glx_window = glXCreateWindow( x_display, fb_config, xcb_window, 0 );
+	if (!glx_window) {
+		xcb_destroy_window(xcb_connection, xcb_window);
+		glXDestroyContext (x_display, glx_context);
+		return false;
+	}
+	glx_drawable = glx_window;
+
+	XVisualInfo *vi =  glXGetVisualFromFBConfig(x_display, fb_config);
+	skg_setup_xlib(x_display, vi, &fb_config, &glx_drawable);
 	skg_callback_log([](skg_log_ level, const char *text) { 
 		if (level != skg_log_info)
 			printf("[%d] %s\n", level, text); 
@@ -236,9 +263,11 @@ bool shell_create_window() {
 		return false;
 	}
 
+	sk_swapchain = skg_swapchain_create(&glx_drawable, skg_tex_fmt_rgba32_linear, skg_tex_fmt_depth16, sk_width, sk_height);
+
 	// Setup Platform/Renderer backends
 	ImGui::CreateContext();
-	ImGui_ImplX11_Init(window);
+	ImGui_ImplX11_Init(xcb_window);
 	ImGui_ImplSkg_Init();
 
 	return true;
@@ -248,20 +277,21 @@ void shell_destroy_window() {
 	ImGui_ImplX11_Shutdown();
 	ImGui::DestroyContext();
 
-	xcb_disconnect(connection);
+	xcb_disconnect(xcb_connection);
+	XCloseDisplay(x_display);
 }
 
 void shell_loop(void (*step)()) {
 	// Main loop
 	bool done = false;
 	xcb_generic_error_t* x_Err = nullptr;
-	xcb_atom_t wm_protocols = xcb_intern_atom_reply(connection,
-		xcb_intern_atom(connection, 1, 12, "WM_PROTOCOLS"),
+	xcb_atom_t wm_protocols = xcb_intern_atom_reply(xcb_connection,
+		xcb_intern_atom(xcb_connection, 1, 12, "WM_PROTOCOLS"),
 		&x_Err)->atom;
-	xcb_atom_t wm_delete_window = xcb_intern_atom_reply(connection,
-		xcb_intern_atom(connection, 0, 16, "WM_DELETE_WINDOW"),
+	xcb_atom_t wm_delete_window = xcb_intern_atom_reply(xcb_connection,
+		xcb_intern_atom(xcb_connection, 0, 16, "WM_DELETE_WINDOW"),
 		&x_Err)->atom;
-	xcb_change_property(connection, XCB_PROP_MODE_REPLACE, window,
+	xcb_change_property(xcb_connection, XCB_PROP_MODE_REPLACE, xcb_window,
 		wm_protocols, 4, 32, 1, &wm_delete_window);
 
 	while (!done)
@@ -271,7 +301,7 @@ void shell_loop(void (*step)()) {
 		// - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
 		// - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
 		// Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
-		xcb_generic_event_t* event = xcb_poll_for_event(connection);
+		xcb_generic_event_t* event = xcb_poll_for_event(xcb_connection);
 		if (event)
 		{
 			if (!ImGui_ImplX11_ProcessEvent(event))
@@ -280,7 +310,7 @@ void shell_loop(void (*step)()) {
 				{
 				case XCB_EXPOSE:
 				{
-					xcb_flush(connection);
+					xcb_flush(xcb_connection);
 					break;
 				}
 				case XCB_CLIENT_MESSAGE:
