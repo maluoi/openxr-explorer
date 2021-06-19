@@ -46,7 +46,8 @@ xr_properties_t openxr_load_properties();
 xr_view_info_t  openxr_load_view      (XrViewConfigurationType view_config);
 void            openxr_load_enums     (xr_settings_t settings);
 const char *    openxr_result_string  (XrResult result);
-void            openxr_register_enums();
+void            openxr_register_enums ();
+bool            openxr_has_ext        (const char *ext_name);
 
 
 /*** Code ********************************/
@@ -212,14 +213,6 @@ void openxr_init_session() {
 	gfx_binding.glxContext  = (GLXContext )platform._glx_context;
 	xrGetInstanceProcAddr(xr_instance, "xrGetOpenGLGraphicsRequirementsKHR", (PFN_xrVoidFunction *)(&ext_xrGetOpenGLGraphicsRequirementsKHR));
 	ext_xrGetOpenGLGraphicsRequirementsKHR(xr_instance, xr_system_id, &requirement);
-	printf("version min: %d.%d.%d\n", 
-		(int32_t)XR_VERSION_MAJOR(requirement.minApiVersionSupported),
-		(int32_t)XR_VERSION_MINOR(requirement.minApiVersionSupported),
-		(int32_t)XR_VERSION_PATCH(requirement.minApiVersionSupported));
-	printf("version max: %d.%d.%d\n", 
-		(int32_t)XR_VERSION_MAJOR(requirement.maxApiVersionSupported),
-		(int32_t)XR_VERSION_MINOR(requirement.maxApiVersionSupported),
-		(int32_t)XR_VERSION_PATCH(requirement.maxApiVersionSupported));
 #elif defined(SKG_OPENGL) && defined(_WIN32)
 	XrGraphicsBindingOpenGLKHR gfx_binding = { XR_TYPE_GRAPHICS_BINDING_OPENGL_KHR };
 	gfx_binding.hDC   = (HDC  )platform._gl_hdc;
@@ -236,6 +229,11 @@ void openxr_init_session() {
 	XrSessionCreateInfo session_info = { XR_TYPE_SESSION_CREATE_INFO };
 	session_info.next     = &gfx_binding;
 	session_info.systemId = xr_system_id;
+
+	// If the headless extension is present, we don't need a graphics binding!
+	if (openxr_has_ext("XR_MND_headless"))
+		session_info.next = nullptr;
+
 	XrResult result = xrCreateSession(xr_instance, &session_info, &xr_session);
 	if (XR_FAILED(result)) {
 		xr_session_err = openxr_result_string(result);
@@ -302,6 +300,16 @@ xr_extensions_t openxr_load_exts() {
 	xr_tables.add(table);
 
 	return result;
+}
+
+///////////////////////////////////////////
+
+bool openxr_has_ext(const char *ext_name){
+	for (int32_t i = 0; i < xr_extensions.extensions.count ; i++) {
+		if (strcmp(ext_name, xr_extensions.extensions[i].extensionName) == 0)
+		return true;
+	}
+	return false;
 }
 
 ///////////////////////////////////////////
