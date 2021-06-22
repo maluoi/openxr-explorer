@@ -10,3 +10,8 @@ set(OPENXR_loader_LIBRARY "${CMAKE_BINARY_DIR}/src/loader/Release/openxr_loader.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 add_subdirectory(src)
+
+install(TARGETS openxr-explorer xrsetruntime
+        DESTINATION bin)
+
+install(FILES src/common/xr_runtimes.txt DESTINATION bin)
