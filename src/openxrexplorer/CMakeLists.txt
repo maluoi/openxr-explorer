@@ -5,8 +5,10 @@ project(openxr-explorer VERSION 1.0
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 
 find_package(OpenXR REQUIRED)
-find_package(X11 REQUIRED)
-find_package(GLEW REQUIRED)
+if (UNIX)
+    find_package(X11 REQUIRED)
+    find_package(GLEW REQUIRED)
+endif(UNIX)
 
 add_executable(openxr-explorer 
     main.cpp
@@ -42,18 +44,22 @@ target_include_directories(openxr-explorer PRIVATE
     ../common
     ${OPENXR_OPENXR_INCLUDE_DIR})
 
+if (UNIX)
+    list(APPEND LINUX_LIBS X11)
+    list(APPEND LINUX_LIBS X11-xcb)
+    list(APPEND LINUX_LIBS ${X11_LIBRARIES})
+    list(APPEND LINUX_LIBS xcb)
+    list(APPEND LINUX_LIBS xcb-xkb)
+    list(APPEND LINUX_LIBS xcb-randr)
+    list(APPEND LINUX_LIBS xcb-xfixes)
+    list(APPEND LINUX_LIBS xcb-cursor)
+    list(APPEND LINUX_LIBS xcb-keysyms)
+    list(APPEND LINUX_LIBS GL)
+    list(APPEND LINUX_LIBS GLEW)
+    list(APPEND LINUX_LIBS GLX)
+endif(UNIX)
+
 target_link_libraries(openxr-explorer 
     xrruntime 
     openxr_loader
-    X11
-    X11-xcb
-    ${X11_LIBRARIES}
-    xcb
-    xcb-xkb
-    xcb-randr
-    xcb-xfixes
-    xcb-cursor
-    xcb-keysyms
-    GL
-    GLEW
-    GLX)
+    ${LINUX_LIBS})
