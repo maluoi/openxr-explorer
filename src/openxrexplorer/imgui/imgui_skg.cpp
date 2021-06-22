@@ -305,38 +305,35 @@ void shell_loop(void (*step)()) {
 		// - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
 		// Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
 		xcb_generic_event_t* event = xcb_poll_for_event(xcb_connection);
-		if (event)
-		{
+		if (event) {
 			if (!ImGui_ImplX11_ProcessEvent(event))
 			{
 				switch (event->response_type & ~0x80)
 				{
-				case XCB_EXPOSE:
-				{
+				case XCB_EXPOSE: {
 					xcb_flush(xcb_connection);
 					break;
 				}
-				case XCB_CLIENT_MESSAGE:
-				{
+				case XCB_CLIENT_MESSAGE: {
 					if (((xcb_client_message_event_t*)event)->data.data32[0] == wm_delete_window)
 						done = true;
-					break;
-				}
-				case XCB_CONFIGURE_NOTIFY:
-				{
-					xcb_configure_notify_event_t* config = (xcb_configure_notify_event_t*)event;
-					// Set DisplaySize here instead of checking in X11 NewFrame
-					// Checking window size is request/response
-					ImGui::GetIO().DisplaySize = ImVec2(config->width, config->height); // FIXME: Why isn't this processed in ImGui_ImplX11_ProcessEvent?
-
-					sk_width  = config->width;
-					sk_height = config->height;
-					skg_swapchain_resize(&sk_swapchain, sk_width, sk_height);
 					break;
 				}
 				default:
 					break;
 				}
+			}
+			switch (event->response_type & ~0x80) {
+			case XCB_CONFIGURE_NOTIFY: {
+				xcb_configure_notify_event_t* config = (xcb_configure_notify_event_t*)event;
+				// Set DisplaySize here instead of checking in X11 NewFrame
+				// Checking window size is request/response
+				sk_width  = config->width;
+				sk_height = config->height;
+				ImGui::GetIO().DisplaySize = ImVec2(sk_width, sk_height);
+				skg_swapchain_resize(&sk_swapchain, sk_width, sk_height);
+				break;
+			}
 			}
 
 			// xcb allocates the memory for the event and specifies the user to free it

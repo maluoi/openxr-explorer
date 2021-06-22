@@ -435,7 +435,7 @@ typedef struct skg_platform_data_t {
 
 ///////////////////////////////////////////
 
-SKG_API void                skg_setup_xlib               (void *dpy, void *vi, void *fbconfig, void *drawable);
+SKG_API void                skg_setup_xlib               (void *dpy, void *vi, void *fbconfig, void *glx_drawable);
 SKG_API int32_t             skg_init                     (const char *app_name, void *adapter_id);
 SKG_API void                skg_shutdown                 ();
 SKG_API void                skg_callback_log             (void (*callback)(skg_log_ level, const char *text));
@@ -2534,7 +2534,7 @@ void skg_setup_xlib(void *dpy, void *vi, void *fbconfig, void *drawable) {
 	xDisplay    =  (Display    *) dpy;
 	visualInfo  =  (XVisualInfo*) vi;
 	glxFBConfig = *(GLXFBConfig*) fbconfig;
-	glxDrawable = *(Drawable   *) drawable;
+	glxDrawable = *(GLXDrawable*) drawable;
 #endif
 }
 

@@ -77,12 +77,8 @@ void app_shutdown() {
 ///////////////////////////////////////////
 
 void app_step(ImVec2 canvas_size) {
-	ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
-	if (ImGui::DockBuilderGetNode(dockspace_id) == nullptr) {
-		ImGui::DockBuilderRemoveNode(dockspace_id); // Clear out existing layout
-		ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_PassthruCentralNode); // Add empty node
-		ImGui::DockBuilderSetNodeSize(dockspace_id, canvas_size);
-
+	ImGuiID dockspace_id = ImGui::DockSpaceOverViewport(nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
+	if (!ImGui::DockBuilderGetNode(dockspace_id)->IsSplitNode()) {
 		ImGuiID dock_id_left;
 		ImGuiID dock_id_mid;
 		ImGuiID dock_id_right;
