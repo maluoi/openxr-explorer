@@ -814,7 +814,9 @@ void ImGui_ImplX11_InitPlatformInterface()
         }
 
         // Assuming square pixels.
-        monitor.DpiScale = (itr.data->width / (itr.data->width_in_millimeters / 25.4)) / 96.0;
+        monitor.DpiScale = (int32_t)((itr.data->width / (itr.data->width_in_millimeters / 25.4)) / 96.0);
+        if (monitor.DpiScale < 1)
+            monitor.DpiScale = 1;
         platform_io.Monitors.push_back(monitor);
     }
     free(monitors);
