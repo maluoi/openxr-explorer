@@ -2,6 +2,7 @@
 #include "imgui_impl_skg.h"
 
 #if defined(_WIN32)
+#include "../resource.h"
 #include "imgui_impl_win32.h"
 #include <windows.h>
 
@@ -112,9 +113,20 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 }
 
 bool shell_create_window() {
+	FreeConsole();
+
 	WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(NULL), NULL, NULL, NULL, NULL, "ImGui sk_gpu shell", NULL };
 	RegisterClassEx(&wc);
 	shell_hwnd = CreateWindow(wc.lpszClassName, app_name, WS_OVERLAPPEDWINDOW, 100, 100, sk_width, sk_height, NULL, NULL, wc.hInstance, NULL);
+
+	HANDLE icon = LoadIcon(wc.hInstance, MAKEINTRESOURCE(IDI_ICON1));
+	if (icon) {
+		SendMessage(shell_hwnd, WM_SETICON, ICON_SMALL, (LPARAM)icon);
+		SendMessage(shell_hwnd, WM_SETICON, ICON_BIG,   (LPARAM)icon);
+
+		SendMessage(GetWindow(shell_hwnd, GW_OWNER), WM_SETICON, ICON_SMALL, (LPARAM)icon);
+		SendMessage(GetWindow(shell_hwnd, GW_OWNER), WM_SETICON, ICON_BIG,   (LPARAM)icon);
+	}
 
 	// Initialize Direct3D
 	skg_callback_log([](skg_log_ level, const char *text) { 

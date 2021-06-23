@@ -10,6 +10,14 @@ if (UNIX)
     find_package(GLEW REQUIRED)
 endif(UNIX)
 
+if (WIN32)
+    #set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /subsystem:windows /ENTRY:mainCRTStartup")
+    set(PLATFORM_FILES
+        resource.h
+        resource.rc
+    )
+endif(WIN32)
+
 add_executable(openxr-explorer 
     main.cpp
     openxr_info.h
@@ -38,7 +46,8 @@ add_executable(openxr-explorer
     imgui/imstb_textedit.h
     imgui/imstb_truetype.h
     imgui/sk_gpu.h
-    imgui/sokol_time.h)
+    imgui/sokol_time.h
+    ${PLATFORM_FILES})
 
 target_include_directories(openxr-explorer PRIVATE
     ../common
