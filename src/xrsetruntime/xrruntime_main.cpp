@@ -151,13 +151,11 @@ bool activate_runtime(int32_t index) {
 	const char *active_file = "/etc/xdg/openxr/1/active_runtime.json";
 
 	if (lstat(active_file, &buffer) == 0) {
-		printf("Found manifest at %s\n", active_file);
 		if (unlink(active_file) == -1) {
 			perror("Couldn't unlink manifest - ");
 			return false;
 		}
 		if (symlink(runtimes[index].file, active_file) == 0) {
-			printf("Linked %s to %s\n", runtimes[index].file, active_file);
 			return true;
 		}
 		perror("Couldn't link new manifest - ");

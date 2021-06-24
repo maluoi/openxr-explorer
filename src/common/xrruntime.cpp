@@ -66,11 +66,14 @@ bool load_runtimes(const char *file, runtime_t **out_runtime_list, int32_t *out_
 	platform_ curr_platform = platform_linux;
 
 	// On linux, we want to support the '~' path feature, esp. for SteamVR
-	const char *home_path = getenv("HOME");
+	const char *user = getenv("USER");
+	if (strcmp(user, "root") == 0)
+		user = getenv("SUDO_USER");
+		
 	char path_tmp[1024];
 	for (int32_t i=0; i<result_count; i+=1) {
 		if (result_list[i].file[0] == '~') {
-			snprintf(path_tmp, sizeof(path_tmp), "%s%s", home_path, &result_list[i].file[1]);
+			snprintf(path_tmp, sizeof(path_tmp), "/home/%s%s", user, &result_list[i].file[1]);
 			strcpy(result_list[i].file, path_tmp);
 		}
 	}
