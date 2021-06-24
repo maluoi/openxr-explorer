@@ -128,6 +128,8 @@ void app_window_runtime() {
 	// Runtime picker
 	if (ImGui::BeginCombo("##Change Runtime", current_runtime == -1 ? "Change Runtime" : runtimes[current_runtime].name)) {
 		for (int n = 0; n < runtime_count; n++) {
+			if (!runtimes[n].present) continue;
+
 			bool is_selected = (current_runtime == n);
 			if (ImGui::Selectable(runtimes[n].name, is_selected) && current_runtime != n) {
 				current_runtime = n;
@@ -325,7 +327,7 @@ void app_set_runtime(int32_t runtime_index) {
 
 void app_set_runtime(int32_t runtime_index) {
 	char command[1024];
-	snprintf(command, sizeof(command), "xrsetruntime -%s", runtimes[runtime_index].name);
+	snprintf(command, sizeof(command), "sudo xrsetruntime -%s", runtimes[runtime_index].name);
 
 	system(command);
 }

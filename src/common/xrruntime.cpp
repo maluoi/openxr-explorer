@@ -1,6 +1,7 @@
 #include "xrruntime.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <malloc.h>
 #include <sys/stat.h>
@@ -59,10 +60,20 @@ bool load_runtimes(const char *file, runtime_t **out_runtime_list, int32_t *out_
 	}
 	fclose(fp);
 
-	#ifdef _WIN32
+	#if defined(_WIN32)
 	platform_ curr_platform = platform_windows;
-	#else
+	#elif defined(__linux)
 	platform_ curr_platform = platform_linux;
+
+	// On linux, we want to support the '~' path feature, esp. for SteamVR
+	const char *home_path = getenv("HOME");
+	char path_tmp[1024];
+	for (int32_t i=0; i<result_count; i+=1) {
+		if (result_list[i].file[0] == '~') {
+			snprintf(path_tmp, sizeof(path_tmp), "%s%s", home_path, &result_list[i].file[1]);
+			strcpy(result_list[i].file, path_tmp);
+		}
+	}
 	#endif
 	for (int32_t i=0; i<result_count; i+=1) {
 		result_list[i].present = 

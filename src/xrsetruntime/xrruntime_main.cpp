@@ -77,19 +77,22 @@ Options:
 ///////////////////////////////////////////
 
 bool set_runtime(const char *flag) {
+	bool matched = false;
 	while (*flag == '-') flag++;
 	for (int32_t i = 0; i < runtime_count; i++) {
 		if (strcmp_nocase(flag, runtimes[i].name) == 0) {
-			if (!runtimes[i].present) {
-				printf("%s isn't installed, or xr_runtimes.txt isn't pointing to the right place! [%s]\n", runtimes[i].name, runtimes[i].file);
-				return true;
-			} else {
+			matched = true;
+			if (runtimes[i].present) {
 				if (activate_runtime(i)) {
 					printf("Activated %s!\n", runtimes[i].name);
 				}
 				return true;
 			}
 		}
+	}
+	if (!matched) {
+		printf("%s isn't installed, or xr_runtimes.txt isn't pointing to the right place!\n", flag);
+		return true;
 	}
 	return false;
 }
@@ -138,8 +141,29 @@ bool activate_runtime(int32_t index) {
 }
 
 #elif defined(__linux__)
+#include <unistd.h>
+#include <sys/stat.h>
+#include <errno.h>
 
 bool activate_runtime(int32_t index) {
+	struct stat buffer;
+
+	const char *active_file = "/etc/xdg/openxr/1/active_runtime.json";
+
+	if (lstat(active_file, &buffer) == 0) {
+		printf("Found manifest at %s\n", active_file);
+		if (unlink(active_file) == -1) {
+			perror("Couldn't unlink manifest - ");
+			return false;
+		}
+		if (symlink(runtimes[index].file, active_file) == 0) {
+			printf("Linked %s to %s\n", runtimes[index].file, active_file);
+			return true;
+		}
+		perror("Couldn't link new manifest - ");
+	}
+
+	printf("Couldn't find active runtime manifest!\n");
 	return false;
 }
 
