@@ -3,7 +3,7 @@
 OpenXR Explorer is a handy debug tool for OpenXR developers. It allows for easy switching between OpenXR runtimes, shows lists of the runtime's supported extensions, and allows for inspection of common properties and enumerations, with direct links to relevant parts of the OpenXR specification!
 
 ## Download
-Get the latest pre-compiled binaries over in [the releases tab](https://github.com/maluoi/openxr-explorer/releases)!
+Get the latest pre-compiled Windows and Linux binaries over in [the releases tab](https://github.com/maluoi/openxr-explorer/releases)!
 
 ## Features
 ### Runtime Switching
@@ -32,15 +32,34 @@ From the root directory:
 mkdir build
 cd build
 cmake ..
-cmake --build . --config Release
+cmake --build . --config Release --parallel 8
 cd Release
 openxr-explorer.exe
 ```
 #### Linux
-Coming soon... OpenXR Explorer was built with Linux support in mind, but it still needs a bit of work yet.
+Pre-requisites
+```
+sudo apt-get install libxcb-keysyms1-dev libxcb1-dev libxcb-xfixes0-dev libxcb-cursor-dev libxcb-xkb-dev
+```
+
+From the root directory:
+```
+mkdir build
+cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake --build . --parallel 8
+./openxr-explorer
+
+# Optionally to install as a system utility
+sudo cmake --install . --prefix /usr
+# And to uninstall (still in build dir)
+sudo xargs rm < install_manifest.txt
+```
 
 ### Contributing
 OpenXR is a living API, and there's new extensions coming out all the time! If you think there's something OpenXR Explorer should be displaying, then heck yeah I'll take a pull request! The application is architected to easily allow for additional information. All you need to do is add a new `display_table_t` to the `xr_tables` list, and you're good to go! See `openxr_info.cpp` for reference.
+
+Found a new runtime manifest you think should be included by default? Add it to [xr_runtime_default.h](https://github.com/maluoi/openxr-explorer/blob/main/src/common/xr_runtime_default.h), or raise it as an Issue :)
 
 ### Relevant Stuff
 If you're learning OpenXR, check out this [introductory tutorial](https://playdeck.net/blog/introduction-to-openxr) I also wrote!
