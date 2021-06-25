@@ -1,8 +1,8 @@
 const char *runtime_default_list = R"_(
 # If two runtimes are given the same name , the first
 # valid one will be used. Items in this file are listed
-# before the default items stored in the code. ~ will 
-# be replaced with the HOME path on Linux.
+# after the user's runtime list. ~ will be replaced 
+# with the HOME path on Linux.
 #
 # Format is:
 # [OS id: windows|linux] [name, no space] [path to runtime manifest, spaces are ok]
