@@ -332,6 +332,8 @@ void shell_loop(void (*step)()) {
 	xcb_change_property(xcb_connection, XCB_PROP_MODE_REPLACE, xcb_window,
 		wm_protocols, 4, 32, 1, &wm_delete_window);
 
+	bool    evts             = true;
+	int64_t last_update_time = 0;
 	while (!done)
 	{
 		// Poll and handle events (inputs, window resize, etc.)
@@ -340,7 +342,8 @@ void shell_loop(void (*step)()) {
 		// - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
 		// Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
 		xcb_generic_event_t* event = xcb_poll_for_event(xcb_connection);
-		if (event) {
+		while (event) {
+			evts = true;
 			if (!ImGui_ImplX11_ProcessEvent(event))
 			{
 				switch (event->response_type & ~0x80)
@@ -373,8 +376,12 @@ void shell_loop(void (*step)()) {
 
 			// xcb allocates the memory for the event and specifies the user to free it
 			free(event);
-			continue;
+			event = xcb_poll_for_event(xcb_connection);
 		}
+		if (!evts && stm_sec(stm_since(last_update_time)) > 0.4f) evts = true;
+		if (!evts) { usleep(3000); continue; }
+		evts             = false;
+		last_update_time = stm_now();
 
 		// Start the Dear ImGui frame
 		ImGui_ImplX11_NewFrame();
