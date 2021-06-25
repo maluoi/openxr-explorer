@@ -328,12 +328,18 @@ void app_set_runtime(int32_t runtime_index) {
 
 #elif defined(__linux__)
 #include <unistd.h>
+#include <libgen.h>
 
 void app_set_runtime(int32_t runtime_index) {
-	char command[1024];
-	char cwd[1024];
-	snprintf(command, sizeof(command), "sudo %s/xrsetruntime -%s", getcwd(cwd, sizeof(cwd)), runtimes[runtime_index].name);
-
+	// Get the path of this exe, xrsetruntime should be next to it
+	char path   [1024];
+	char command[1124];
+	if (readlink ("/proc/self/exe", path, sizeof(path)) != -1) {
+		dirname(path);
+		snprintf(command, sizeof(command), "sudo %s/xrsetruntime -%s", path, runtimes[runtime_index].name);
+	} else {
+		snprintf(command, sizeof(command), "sudo xrsetruntime -%s", runtimes[runtime_index].name);
+	}
 	system(command);
 	openxr_info_reload(app_xr_settings);
 }
