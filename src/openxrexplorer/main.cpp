@@ -83,13 +83,13 @@ void app_step(ImVec2 canvas_size) {
 		ImGuiID dock_id_left;
 		ImGuiID dock_id_mid;
 		ImGuiID dock_id_right;
-		ImGuiID dock_id_left_bot;
+		ImGuiID dock_id_right_bot;
 		ImGui::DockBuilderSplitNode(dockspace_id,  ImGuiDir_Left, 0.33f, &dock_id_left,     &dock_id_right);
 		ImGui::DockBuilderSplitNode(dock_id_right, ImGuiDir_Left, 0.5f,  &dock_id_mid,      &dock_id_right);
-		ImGui::DockBuilderSplitNode(dock_id_left,  ImGuiDir_Down, 0.33f, &dock_id_left_bot, &dock_id_left);
+		ImGui::DockBuilderSplitNode(dock_id_right, ImGuiDir_Down, 0.5f,  &dock_id_right_bot, &dock_id_right);
 
 		ImGui::DockBuilderDockWindow("Runtime Information", dock_id_left);
-		ImGui::DockBuilderDockWindow("Misc Enumerations",   dock_id_left_bot);
+		ImGui::DockBuilderDockWindow("Misc Enumerations",   dock_id_right_bot);
 		ImGui::DockBuilderDockWindow("Extensions & Layers", dock_id_mid);
 		ImGui::DockBuilderDockWindow("View Configuration",  dock_id_right);
 		ImGui::DockBuilderFinish(dockspace_id);

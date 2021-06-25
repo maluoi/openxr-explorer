@@ -624,7 +624,7 @@ void openxr_register_enums() {
 	info.source_type_name = "skg_tex_fmt_";
 	info.spec_link        = "xrEnumerateSwapchainFormats";
 	info.requires_session = true;
-	info.tag              = display_tag_view;
+	info.tag              = display_tag_misc;
 	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
 		uint32_t count = 0;
 		XrResult error = xrEnumerateSwapchainFormats(xr_session, 0, &count, nullptr);
@@ -662,7 +662,7 @@ void openxr_register_enums() {
 	info.source_type_name = "XrColorSpaceFB";
 	info.spec_link        = "XrColorSpaceFB";
 	info.requires_session = true;
-	info.tag              = display_tag_view;
+	info.tag              = display_tag_misc;
 	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
 		PFN_xrEnumerateColorSpacesFB xrEnumerateColorSpacesFB;
 		XrResult error = xrGetInstanceProcAddr(xr_instance, "xrEnumerateColorSpacesFB", (PFN_xrVoidFunction *)(&xrEnumerateColorSpacesFB));
