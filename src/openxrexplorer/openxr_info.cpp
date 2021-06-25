@@ -1,5 +1,9 @@
 #include "openxr_info.h"
 
+#if defined(__linux__)
+#include <GL/glxew.h>
+#endif
+
 #include <openxr/openxr_platform.h>
 #include <openxr/openxr_reflection.h>
 
@@ -42,7 +46,8 @@ xr_properties_t openxr_load_properties();
 xr_view_info_t  openxr_load_view      (XrViewConfigurationType view_config);
 void            openxr_load_enums     (xr_settings_t settings);
 const char *    openxr_result_string  (XrResult result);
-void            openxr_register_enums();
+void            openxr_register_enums ();
+bool            openxr_has_ext        (const char *ext_name);
 
 
 /*** Code ********************************/
@@ -152,8 +157,8 @@ void openxr_init_instance(array_t<XrExtensionProperties> extensions) {
 	create_info.enabledExtensionNames = exts.data;
 	create_info.enabledApiLayerCount  = 0;
 	create_info.enabledApiLayerNames  = nullptr;
-	create_info.applicationInfo.applicationVersion = XR_MAKE_VERSION(1, 0, 0);
-	create_info.applicationInfo.engineVersion      = XR_MAKE_VERSION(1, 0, 0);
+	create_info.applicationInfo.applicationVersion = 1;
+	create_info.applicationInfo.engineVersion      = 1;
 	create_info.applicationInfo.apiVersion         = XR_CURRENT_API_VERSION;
 	snprintf(create_info.applicationInfo.applicationName, sizeof(create_info.applicationInfo.applicationName), "%s", "OpenXR Explorer");
 	snprintf(create_info.applicationInfo.engineName,      sizeof(create_info.applicationInfo.engineName     ), "None");
@@ -197,18 +202,21 @@ void openxr_init_session() {
 		return;
 
 	skg_platform_data_t platform = skg_get_platform_data();
-#if defined(XR_USE_PLATFORM_XLIB)
-	XrGraphicsBindingOpenGLXlibKHR gfx_binding = { XR_TYPE_GRAPHICS_BINDING_OPENGL_XLIB_KHR };
+#if defined(SKG_OPENGL) && defined(__linux__)
+	PFN_xrGetOpenGLGraphicsRequirementsKHR ext_xrGetOpenGLGraphicsRequirementsKHR;
+	XrGraphicsRequirementsOpenGLKHR        requirement = { XR_TYPE_GRAPHICS_REQUIREMENTS_OPENGL_KHR };
+	XrGraphicsBindingOpenGLXlibKHR         gfx_binding = { XR_TYPE_GRAPHICS_BINDING_OPENGL_XLIB_KHR };
 	gfx_binding.xDisplay    = (Display*  )platform._x_display;
 	gfx_binding.visualid    = *(uint32_t *)platform._visual_id;
 	gfx_binding.glxFBConfig = (GLXFBConfig)platform._glx_fb_config;
 	gfx_binding.glxDrawable = (GLXDrawable)platform._glx_drawable;
 	gfx_binding.glxContext  = (GLXContext )platform._glx_context;
-#elif defined(XR_USE_GRAPHICS_API_OPENGL_ES)
-	XrGraphicsBindingOpenGLESAndroidKHR gfx_binding = { XR_TYPE_GRAPHICS_BINDING_OPENGL_ES_ANDROID_KHR };
-	gfx_binding.display = (EGLDisplay)platform._egl_display;
-	gfx_binding.config  = (EGLConfig )platform._egl_config;
-	gfx_binding.context = (EGLContext)platform._egl_context;
+	xrGetInstanceProcAddr(xr_instance, "xrGetOpenGLGraphicsRequirementsKHR", (PFN_xrVoidFunction *)(&ext_xrGetOpenGLGraphicsRequirementsKHR));
+	ext_xrGetOpenGLGraphicsRequirementsKHR(xr_instance, xr_system_id, &requirement);
+#elif defined(SKG_OPENGL) && defined(_WIN32)
+	XrGraphicsBindingOpenGLKHR gfx_binding = { XR_TYPE_GRAPHICS_BINDING_OPENGL_KHR };
+	gfx_binding.hDC   = (HDC  )platform._gl_hdc;
+	gfx_binding.hGLRC = (HGLRC)platform._gl_hrc;
 #elif defined(XR_USE_GRAPHICS_API_D3D11)
 	PFN_xrGetD3D11GraphicsRequirementsKHR ext_xrGetD3D11GraphicsRequirementsKHR;
 	XrGraphicsRequirementsD3D11KHR        requirement = { XR_TYPE_GRAPHICS_REQUIREMENTS_D3D11_KHR };
@@ -221,6 +229,11 @@ void openxr_init_session() {
 	XrSessionCreateInfo session_info = { XR_TYPE_SESSION_CREATE_INFO };
 	session_info.next     = &gfx_binding;
 	session_info.systemId = xr_system_id;
+
+	// If the headless extension is present, we don't need a graphics binding!
+	if (openxr_has_ext("XR_MND_headless"))
+		session_info.next = nullptr;
+
 	XrResult result = xrCreateSession(xr_instance, &session_info, &xr_session);
 	if (XR_FAILED(result)) {
 		xr_session_err = openxr_result_string(result);
@@ -287,6 +300,16 @@ xr_extensions_t openxr_load_exts() {
 	xr_tables.add(table);
 
 	return result;
+}
+
+///////////////////////////////////////////
+
+bool openxr_has_ext(const char *ext_name){
+	for (int32_t i = 0; i < xr_extensions.extensions.count ; i++) {
+		if (strcmp(ext_name, xr_extensions.extensions[i].extensionName) == 0)
+		return true;
+	}
+	return false;
 }
 
 ///////////////////////////////////////////

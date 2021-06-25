@@ -5,9 +5,18 @@ project(openxr-explorer VERSION 1.0
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 
 find_package(OpenXR REQUIRED)
+if (UNIX)
+    find_package(X11 REQUIRED)
+    find_package(GLEW REQUIRED)
+endif(UNIX)
 
-include_directories(../common)
-include_directories(${OPENXR_OPENXR_INCLUDE_DIR})
+if (WIN32)
+    #set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /subsystem:windows /ENTRY:mainCRTStartup")
+    set(PLATFORM_FILES
+        resource.h
+        resource.rc
+    )
+endif(WIN32)
 
 add_executable(openxr-explorer 
     main.cpp
@@ -25,6 +34,8 @@ add_executable(openxr-explorer
     imgui/imgui_impl_skg.cpp
     imgui/imgui_impl_win32.h
     imgui/imgui_impl_win32.cpp
+    imgui/imgui_impl_x11.h
+    imgui/imgui_impl_x11.cpp
     imgui/imgui_internal.h
     imgui/imgui_shader.hlsl.h
     imgui/imgui_skg.h
@@ -35,5 +46,32 @@ add_executable(openxr-explorer
     imgui/imstb_textedit.h
     imgui/imstb_truetype.h
     imgui/sk_gpu.h
-    imgui/sokol_time.h)
-target_link_libraries(openxr-explorer xrruntime openxr_loader)
+    imgui/sokol_time.h
+    ${PLATFORM_FILES})
+
+target_include_directories(openxr-explorer PRIVATE
+    ../common
+    ${OPENXR_OPENXR_INCLUDE_DIR})
+
+if (UNIX)
+    set(LINUX_LIBS 
+        X11
+        X11-xcb
+        ${X11_LIBRARIES}
+        xcb
+        xcb-xkb
+        xcb-randr
+        xcb-xfixes
+        xcb-cursor
+        xcb-keysyms
+        GL
+        GLEW
+        GLX )
+endif(UNIX)
+
+target_link_libraries(openxr-explorer 
+    PUBLIC
+    xrruntime 
+    PRIVATE
+    openxr_loader
+    ${LINUX_LIBS})

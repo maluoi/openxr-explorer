@@ -10,3 +10,12 @@ set(OPENXR_loader_LIBRARY "${CMAKE_BINARY_DIR}/src/loader/Release/openxr_loader.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 add_subdirectory(src)
+
+install(TARGETS openxr-explorer xrsetruntime
+        DESTINATION bin)
+
+# Command to install via cmake:
+#     sudo cmake --install . --prefix /usr
+#
+# Command to uninstall afterwards:
+#     sudo xargs rm < install_manifest.txt

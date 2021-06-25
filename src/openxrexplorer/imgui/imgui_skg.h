@@ -10,3 +10,5 @@ void app_step(ImVec2 canvas_size);
 void app_shutdown();
 
 extern const char *app_name;
+extern const char *app_id;
+extern const char *app_path_config;

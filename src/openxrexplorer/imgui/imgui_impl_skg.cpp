@@ -107,10 +107,10 @@ void ImGui_ImplSkg_RenderDrawData(ImDrawData* draw_data) {
 			} else {
 				// Apply scissor/clipping rectangle
 				int32_t rect[4] = {
-					pcmd->ClipRect.x - clip_off.x,
-					pcmd->ClipRect.y - clip_off.y,
-					pcmd->ClipRect.z - pcmd->ClipRect.x,
-					pcmd->ClipRect.w - pcmd->ClipRect.y};
+					(int32_t)(pcmd->ClipRect.x - clip_off.x),
+					(int32_t)(pcmd->ClipRect.y - clip_off.y),
+					(int32_t)(pcmd->ClipRect.z - pcmd->ClipRect.x),
+					(int32_t)(pcmd->ClipRect.w - pcmd->ClipRect.y)};
 				skg_scissor(rect);
 				
 				skg_tex_bind((skg_tex_t*)pcmd->TextureId, skg_bind_t{ 0, skg_stage_pixel });

@@ -8,6 +8,12 @@
 #define XR_USE_GRAPHICS_API_OPENGL
 #endif
 
+#if defined(_WIN32)
+#define XR_USE_PLATFORM_WIN32
+#elif defined(__linux__)
+#define XR_USE_PLATFORM_XLIB
+#endif
+
 #include <openxr/openxr.h>
 
 /*** Types *******************************/

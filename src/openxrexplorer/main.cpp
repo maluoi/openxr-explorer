@@ -1,6 +1,4 @@
 #include "imgui/imgui_skg.h"
-#include "imgui/sk_gpu.h"
-#include "array.h"
 #include "xrruntime.h"
 #include "openxr_info.h"
 #include "app_cli.h"
@@ -10,19 +8,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#if defined(SKG_DIRECT3D11)
-#define XR_USE_GRAPHICS_API_D3D11
-#elif defined(SKG_OPENGL)
-#define XR_USE_GRAPHICS_API_OPENGL
-#endif
-
-#include <openxr/openxr.h>
-#include <openxr/openxr_platform.h>
-#include <openxr/openxr_reflection.h>
-
 /*** Global Variables ********************/
 
 const char*   app_name        = "OpenXR Explorer";
+const char*   app_id          = "openxr-explorer";
 xr_settings_t app_xr_settings = {};
 
 runtime_t *runtimes      = nullptr;
@@ -71,7 +60,7 @@ bool app_init() {
 	colors[ImGuiCol_ButtonHovered] = colors[ImGuiCol_ResizeGripHovered] = colors[ImGuiCol_HeaderHovered]      = colors[ImGuiCol_TabHovered] = colors[ImGuiCol_FrameBgHovered] = hover;
 	colors[ImGuiCol_TableRowBgAlt] = colors[ImGuiCol_TitleBgActive] = barely;
  
-	load_runtimes("xr_runtimes.txt", &runtimes, &runtime_count);
+	load_runtimes(runtime_config_path(), &runtimes, &runtime_count);
 
 	app_xr_settings.allow_session = true;
 	app_xr_settings.form          = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
@@ -89,12 +78,8 @@ void app_shutdown() {
 ///////////////////////////////////////////
 
 void app_step(ImVec2 canvas_size) {
-	ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
-	if (ImGui::DockBuilderGetNode(dockspace_id) == nullptr) {
-		ImGui::DockBuilderRemoveNode(dockspace_id); // Clear out existing layout
-		ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_PassthruCentralNode); // Add empty node
-		ImGui::DockBuilderSetNodeSize(dockspace_id, canvas_size);
-
+	ImGuiID dockspace_id = ImGui::DockSpaceOverViewport(nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
+	if (!ImGui::DockBuilderGetNode(dockspace_id)->IsSplitNode()) {
 		ImGuiID dock_id_left;
 		ImGuiID dock_id_mid;
 		ImGuiID dock_id_right;
@@ -144,6 +129,8 @@ void app_window_runtime() {
 	// Runtime picker
 	if (ImGui::BeginCombo("##Change Runtime", current_runtime == -1 ? "Change Runtime" : runtimes[current_runtime].name)) {
 		for (int n = 0; n < runtime_count; n++) {
+			if (!runtimes[n].present) continue;
+
 			bool is_selected = (current_runtime == n);
 			if (ImGui::Selectable(runtimes[n].name, is_selected) && current_runtime != n) {
 				current_runtime = n;
@@ -166,13 +153,15 @@ void app_window_runtime() {
 	// Runtime list
 	ImGui::Text("Runtime not here?");
 	ImGui::SameLine();
-	if (ImGui::Button("Edit runtime list"))
-		app_open_link("xr_runtimes.txt");
+	if (ImGui::Button("Edit runtime list")) {
+		ensure_runtime_config_exists(runtime_config_path());
+		app_open_link(runtime_config_path());
+	}
 	ImGui::SameLine();
 	if (ImGui::Button("Reload list")) {
 		free(runtimes);
 		runtime_count = 0;
-		load_runtimes("xr_runtimes.txt", &runtimes, &runtime_count);
+		load_runtimes(runtime_config_path(), &runtimes, &runtime_count);
 		current_runtime = -1;
 	}
 
@@ -267,7 +256,7 @@ void app_element_table(const display_table_t *table) {
 			if (ImGui::BeginTable(table->name_type, 1, flags)) {
 				ImGui::TableNextRow();
 				ImGui::TableNextColumn();
-				ImGui::Text(table->error);
+				ImGui::Text("%s", table->error);
 
 				ImGui::EndTable();
 			}
@@ -288,7 +277,7 @@ void app_element_table(const display_table_t *table) {
 							app_open_spec(table->cols[c][i].spec);
 						ImGui::PopID();
 					} else {
-						ImGui::Text(table->cols[c][i].text);
+						ImGui::Text("%s", table->cols[c][i].text);
 					}
 				}
 			}
@@ -308,8 +297,11 @@ void app_element_table(const display_table_t *table) {
 
 ///////////////////////////////////////////
 
+#if defined(_WIN32)
+
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <shellapi.h>
 void app_set_runtime(int32_t runtime_index) {
 	char command[1024];
 	snprintf(command, sizeof(command), " -%s", runtimes[runtime_index].name);
@@ -333,6 +325,26 @@ void app_set_runtime(int32_t runtime_index) {
 		openxr_info_reload(app_xr_settings);
 	}
 }
+
+#elif defined(__linux__)
+#include <unistd.h>
+#include <libgen.h>
+
+void app_set_runtime(int32_t runtime_index) {
+	// Get the path of this exe, xrsetruntime should be next to it
+	char path   [1024];
+	char command[1124];
+	if (readlink ("/proc/self/exe", path, sizeof(path)) != -1) {
+		dirname(path);
+		snprintf(command, sizeof(command), "sudo %s/xrsetruntime -%s", path, runtimes[runtime_index].name);
+	} else {
+		snprintf(command, sizeof(command), "sudo xrsetruntime -%s", runtimes[runtime_index].name);
+	}
+	system(command);
+	openxr_info_reload(app_xr_settings);
+}
+
+#endif
 
 ///////////////////////////////////////////
 
