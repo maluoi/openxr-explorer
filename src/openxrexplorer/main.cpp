@@ -11,6 +11,7 @@
 /*** Global Variables ********************/
 
 const char*   app_name        = "OpenXR Explorer";
+const char*   app_id          = "openxr-explorer";
 xr_settings_t app_xr_settings = {};
 
 runtime_t *runtimes      = nullptr;

@@ -25,6 +25,7 @@
 #define SOKOL_TIME_IMPL
 #include "sokol_time.h"
 
+const char     *app_path_config = "";
 skg_swapchain_t sk_swapchain = {};
 int32_t         sk_width     = 1280;
 int32_t         sk_height    = 800;
@@ -186,6 +187,8 @@ void shell_loop(void (*step)()) {
 }
 
 #elif defined(__linux__)
+#include <sys/stat.h>
+#include <unistd.h>
 
 Display *x_display = nullptr;
 
@@ -206,6 +209,8 @@ GLint       glx_attributes[] = {
 xcb_connection_t *xcb_connection = nullptr;
 xcb_screen_t     *xcb_screen     = nullptr;
 xcb_drawable_t    xcb_window     = {};
+char app_config_path_str[1024];
+char app_ini_path_str   [1024];
 
 bool shell_create_window() {
 	x_display = XOpenDisplay(nullptr);
@@ -280,8 +285,25 @@ bool shell_create_window() {
 
 	sk_swapchain = skg_swapchain_create(&glx_drawable, skg_tex_fmt_rgba32_linear, skg_tex_fmt_depth16, sk_width, sk_height);
 
-	// Setup Platform/Renderer backends
+	// Set up the config folder
+	const char *config_root = getenv("XDG_CONFIG_HOME");
+	if (config_root == nullptr) {
+		config_root = getenv("HOME");
+		snprintf(app_config_path_str, sizeof(app_config_path_str), "%s/.config/%s", config_root, app_id);
+	} else {
+		snprintf(app_config_path_str, sizeof(app_config_path_str), "%s/%s", config_root, app_id);
+	}
+	app_path_config = app_config_path_str;
+	struct stat st = {};
+	if (stat(app_config_path_str, &st) == -1) {
+		mkdir(app_config_path_str, 0700);
+	}
+
+	// Set the .ini file
 	ImGui::CreateContext();
+	snprintf(app_ini_path_str, sizeof(app_ini_path_str), "%s/imgui.ini", app_config_path_str);
+	ImGui::GetIO().IniFilename = app_ini_path_str;
+	// Setup Platform/Renderer backends
 	ImGui_ImplX11_Init(xcb_window);
 	ImGui_ImplSkg_Init();
 
@@ -289,6 +311,7 @@ bool shell_create_window() {
 }
 
 void shell_destroy_window() {
+
 	ImGui_ImplX11_Shutdown();
 	ImGui::DestroyContext();
 

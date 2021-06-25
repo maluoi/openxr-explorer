@@ -48,7 +48,7 @@ bool load_runtimes(const char *file, runtime_t **out_runtime_list, int32_t *out_
 	int32_t    result_count = 0;
 	int32_t    file_id = 0;
 	const char*line    = files[0];
-	while (files[file_id] != nullptr && *line != '\0') {
+	while (files[file_id] != nullptr) {
 		runtime_t runtime       = {};
 		int32_t   spaces        = 0;
 		int32_t   curr          = 0;
@@ -81,7 +81,7 @@ bool load_runtimes(const char *file, runtime_t **out_runtime_list, int32_t *out_
 
 		if      (strcmp(plat_name,"windows") == 0) runtime.platform = platform_windows;
 		else if (strcmp(plat_name,"linux"  ) == 0) runtime.platform = platform_linux;
-		else if (strcmp(plat_name,"#") == 0) continue;
+		else continue;
 
 		result_count += 1;
 		result_list = (runtime_t*)realloc(result_list, sizeof(runtime_t) * result_count);
@@ -149,7 +149,7 @@ void ensure_runtime_config_exists(const char *at_file) {
 #if defined(_WIN32)
 
 const char *runtime_config_path() {
-	return "openxr_explorer_runtimes.txt";
+	return "runtimes.txt";
 }
 
 #elif defined(__linux__) 
@@ -159,12 +159,10 @@ const char *runtime_config_path() {
 	const char *config_root = getenv("XDG_CONFIG_HOME");
 	if (config_root == nullptr) {
 		config_root = getenv("HOME");
-		snprintf(runtime_config_path_str, sizeof(runtime_config_path_str), "%s/.config/openxr_explorer_runtimes.txt", config_root);
+		snprintf(runtime_config_path_str, sizeof(runtime_config_path_str), "%s/.config/openxr-explorer/runtimes.txt", config_root);
 	} else {
-		snprintf(runtime_config_path_str, sizeof(runtime_config_path_str), "%s/openxr_explorer_runtimes.txt", config_root);
+		snprintf(runtime_config_path_str, sizeof(runtime_config_path_str), "%s/openxr-explorer/runtimes.txt", config_root);
 	}
-	
-	printf("Config root: %s\n", runtime_config_path_str);
 	
 	return runtime_config_path_str;
 }

@@ -14,4 +14,8 @@ add_subdirectory(src)
 install(TARGETS openxr-explorer xrsetruntime
         DESTINATION bin)
 
-# sudo cmake --install . --prefix /usr
+# Command to install via cmake:
+#     sudo cmake --install . --prefix /usr
+#
+# Command to uninstall afterwards:
+#     sudo xargs rm < install_manifest.txt
