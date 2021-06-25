@@ -14,6 +14,4 @@ add_subdirectory(src)
 install(TARGETS openxr-explorer xrsetruntime
         DESTINATION bin)
 
-install(FILES src/common/xr_runtimes.txt DESTINATION bin)
-
 # sudo cmake --install . --prefix /usr

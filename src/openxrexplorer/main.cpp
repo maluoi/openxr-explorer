@@ -59,7 +59,7 @@ bool app_init() {
 	colors[ImGuiCol_ButtonHovered] = colors[ImGuiCol_ResizeGripHovered] = colors[ImGuiCol_HeaderHovered]      = colors[ImGuiCol_TabHovered] = colors[ImGuiCol_FrameBgHovered] = hover;
 	colors[ImGuiCol_TableRowBgAlt] = colors[ImGuiCol_TitleBgActive] = barely;
  
-	load_runtimes("xr_runtimes.txt", &runtimes, &runtime_count);
+	load_runtimes(runtime_config_path(), &runtimes, &runtime_count);
 
 	app_xr_settings.allow_session = true;
 	app_xr_settings.form          = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
@@ -152,13 +152,15 @@ void app_window_runtime() {
 	// Runtime list
 	ImGui::Text("Runtime not here?");
 	ImGui::SameLine();
-	if (ImGui::Button("Edit runtime list"))
-		app_open_link("xr_runtimes.txt");
+	if (ImGui::Button("Edit runtime list")) {
+		ensure_runtime_config_exists(runtime_config_path());
+		app_open_link(runtime_config_path());
+	}
 	ImGui::SameLine();
 	if (ImGui::Button("Reload list")) {
 		free(runtimes);
 		runtime_count = 0;
-		load_runtimes("xr_runtimes.txt", &runtimes, &runtime_count);
+		load_runtimes(runtime_config_path(), &runtimes, &runtime_count);
 		current_runtime = -1;
 	}
 
@@ -324,12 +326,15 @@ void app_set_runtime(int32_t runtime_index) {
 }
 
 #elif defined(__linux__)
+#include <unistd.h>
 
 void app_set_runtime(int32_t runtime_index) {
 	char command[1024];
-	snprintf(command, sizeof(command), "sudo xrsetruntime -%s", runtimes[runtime_index].name);
+	char cwd[1024];
+	snprintf(command, sizeof(command), "sudo %s/xrsetruntime -%s", getcwd(cwd, sizeof(cwd)), runtimes[runtime_index].name);
 
 	system(command);
+	openxr_info_reload(app_xr_settings);
 }
 
 #endif

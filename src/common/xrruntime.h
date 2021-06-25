@@ -20,4 +20,6 @@ typedef struct runtime_t {
 
 /*** Signatures **************************/
 
+const char *runtime_config_path();
+void ensure_runtime_config_exists(const char *at_file);
 bool load_runtimes(const char *file, runtime_t **out_runtime_list, int32_t *out_runtime_count);
