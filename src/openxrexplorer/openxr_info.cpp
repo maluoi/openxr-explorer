@@ -347,14 +347,18 @@ xr_properties_t openxr_load_properties() {
 
 	const char *properties_err = nullptr;
 	if (!xr_instance_err && !xr_system_err) {
-		result.system        = { XR_TYPE_SYSTEM_PROPERTIES };
-		result.hand_tracking = { XR_TYPE_SYSTEM_HAND_TRACKING_PROPERTIES_EXT };
-		result.hand_mesh     = { XR_TYPE_SYSTEM_HAND_TRACKING_MESH_PROPERTIES_MSFT };
-		result.gaze          = { XR_TYPE_SYSTEM_EYE_GAZE_INTERACTION_PROPERTIES_EXT };
+		result.system         = { XR_TYPE_SYSTEM_PROPERTIES };
+		result.hand_tracking  = { XR_TYPE_SYSTEM_HAND_TRACKING_PROPERTIES_EXT };
+		result.hand_mesh      = { XR_TYPE_SYSTEM_HAND_TRACKING_MESH_PROPERTIES_MSFT };
+		result.gaze           = { XR_TYPE_SYSTEM_EYE_GAZE_INTERACTION_PROPERTIES_EXT };
+		result.foveated_varjo = { XR_TYPE_SYSTEM_FOVEATED_RENDERING_PROPERTIES_VARJO };
+		result.color_space_fb = { XR_TYPE_SYSTEM_COLOR_SPACE_PROPERTIES_FB };
 
-		result.system       .next = &result.hand_tracking;
-		result.hand_tracking.next = &result.hand_mesh;
-		result.hand_mesh    .next = &result.gaze;
+		result.system        .next = &result.hand_tracking;
+		result.hand_tracking .next = &result.hand_mesh;
+		result.hand_mesh     .next = &result.gaze;
+		result.gaze          .next = &result.foveated_varjo;
+		result.foveated_varjo.next = &result.color_space_fb;
 
 		XrResult error = xrGetSystemProperties(xr_instance, xr_system_id, &result.system);
 		if (XR_FAILED(error)) {
@@ -414,6 +418,34 @@ xr_properties_t openxr_load_properties() {
 	table.show_type = true;
 	table.column_count = 2;
 	table.cols[0].add({"supportsEyeGazeInteraction"}); table.cols[1].add({result.gaze.supportsEyeGazeInteraction ? "True":"False"});
+	xr_tables.add(table);
+
+	table = {};
+	table.name_func = "xrGetSystemProperties";
+	table.name_type = "XrSystemFoveatedRenderingPropertiesVARJO";
+	table.spec      = "XrSystemFoveatedRenderingPropertiesVARJO";
+	table.error     = properties_err;
+	table.tag       = display_tag_properties;
+	table.show_type = true;
+	table.column_count = 2;
+	table.cols[0].add({"supportsFoveatedRendering"}); table.cols[1].add({result.foveated_varjo.supportsFoveatedRendering ? "True":"False"});
+	xr_tables.add(table);
+
+	table = {};
+	table.name_func = "xrGetSystemProperties";
+	table.name_type = "XrSystemColorSpacePropertiesFB";
+	table.spec      = "XrSystemColorSpacePropertiesFB";
+	table.error     = properties_err;
+	table.tag       = display_tag_properties;
+	table.show_type = true;
+	table.column_count = 2;
+	const char *color_space_name = "N/A";
+	switch (result.color_space_fb.colorSpace) {
+#define CASE_GET_NAME(e, val) case e: color_space_name = #e; break;
+		XR_LIST_ENUM_XrColorSpaceFB(CASE_GET_NAME)
+#undef CASE_GET_NAME
+	}
+	table.cols[0].add({"colorSpace"}); table.cols[1].add({color_space_name});
 	xr_tables.add(table);
 
 	return result;
@@ -622,6 +654,35 @@ void openxr_register_enums() {
 			}
 		}
 		formats.free();
+		return error;
+	};
+	xr_misc_enums.add(info);
+
+	info = { "xrEnumerateColorSpacesFB" };
+	info.source_type_name = "XrColorSpaceFB";
+	info.spec_link        = "XrColorSpaceFB";
+	info.requires_session = true;
+	info.tag              = display_tag_view;
+	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
+		PFN_xrEnumerateColorSpacesFB xrEnumerateColorSpacesFB;
+		XrResult error = xrGetInstanceProcAddr(xr_instance, "xrEnumerateColorSpacesFB", (PFN_xrVoidFunction *)(&xrEnumerateColorSpacesFB));
+		if (XR_FAILED(error)) return error;
+
+		uint32_t count = 0;
+		error = xrEnumerateColorSpacesFB(xr_session, 0, &count, nullptr);
+		array_t<XrColorSpaceFB> color_spaces(count, (XrColorSpaceFB)0);
+		xrEnumerateColorSpacesFB(xr_session, count, &count, color_spaces.data);
+
+		for (size_t i = 0; i < color_spaces.count; i++) {
+			for (size_t i = 0; i < count; i++) {
+				switch (color_spaces[i]) {
+#define CASE_GET_NAME(e, val) case e: ref_info->items.add({ #e }); break;
+					XR_LIST_ENUM_XrColorSpaceFB(CASE_GET_NAME)
+#undef CASE_GET_NAME
+				}
+			}
+		}
+		color_spaces.free();
 		return error;
 	};
 	xr_misc_enums.add(info);

@@ -61,11 +61,13 @@ struct xr_enum_info_t {
 };
 
 struct xr_properties_t {
-	XrInstanceProperties                    instance;
-	XrSystemProperties                      system;
-	XrSystemHandTrackingPropertiesEXT       hand_tracking;
-	XrSystemHandTrackingMeshPropertiesMSFT  hand_mesh;
-	XrSystemEyeGazeInteractionPropertiesEXT gaze;
+	XrInstanceProperties                     instance;
+	XrSystemProperties                       system;
+	XrSystemHandTrackingPropertiesEXT        hand_tracking;
+	XrSystemHandTrackingMeshPropertiesMSFT   hand_mesh;
+	XrSystemEyeGazeInteractionPropertiesEXT  gaze;
+	XrSystemFoveatedRenderingPropertiesVARJO foveated_varjo;
+	XrSystemColorSpacePropertiesFB           color_space_fb;
 };
 
 struct xr_view_info_t {
