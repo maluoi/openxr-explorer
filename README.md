@@ -24,7 +24,7 @@ It can be handy to know what to expect when requesting data from OpenXR! This to
 Just about everything you see in the GUI is also available in text format when used from the command line! If you provide the openxr-explorer application with function or type names as arguments, it'll just dump the results as text to the console instead of launching the GUI. Who needs this? I don't know! I sure didn't, but I hope someone else does :)
 
 ### Building
-If you just want to use it, see the [Releases](https://github.com/maluoi/openxr-explorer/releases) tab! If you want to build it or modify it, then OpenXR Explorer uses cmake. Note that this repository uses git submodules, so make sure that's all downloaded!
+If you just want to use it, see the [Releases](https://github.com/maluoi/openxr-explorer/releases) tab! If you want to build it or modify it, then OpenXR Explorer uses cmake. Note that this repository uses git submodules, so make sure to clone with `--recursive`, or run `git submodule update --init --recursive` after cloning!
 
 #### Windows
 From the root directory:
@@ -49,11 +49,6 @@ cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
 cmake --build . --parallel 8
 ./openxr-explorer
-
-# Optionally to install as a system utility
-sudo cmake --install . --prefix /usr
-# And to uninstall (still in build dir)
-sudo xargs rm < install_manifest.txt
 ```
 
 ### Contributing
