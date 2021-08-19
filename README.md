@@ -41,6 +41,7 @@ Pre-requisites
 ```
 sudo apt-get install libxcb-keysyms1-dev libxcb1-dev libxcb-xfixes0-dev libxcb-cursor-dev libxcb-xkb-dev
 ```
+Linux builds require the OpenXR loader to be installed separately, see the [build instructions here](https://github.com/KhronosGroup/OpenXR-SDK#linux).
 
 From the root directory:
 ```
@@ -48,6 +49,10 @@ mkdir build
 cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
 cmake --build . --parallel 8
+
+# Optionally, to install the executables:
+sudo cmake --install . --prefix /usr/local
+
 ./openxr-explorer
 ```
 

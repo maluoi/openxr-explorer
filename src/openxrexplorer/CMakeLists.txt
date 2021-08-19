@@ -4,7 +4,7 @@ project(openxr-explorer VERSION 1.0
 
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 
-find_package(OpenXR REQUIRED)
+find_package(OpenXR 1.0.17 REQUIRED)
 if (UNIX)
     find_package(X11 REQUIRED)
     find_package(GLEW REQUIRED)
@@ -51,7 +51,7 @@ add_executable(openxr-explorer
 
 target_include_directories(openxr-explorer PRIVATE
     ../common
-    ${OPENXR_OPENXR_INCLUDE_DIR})
+    ${OpenXR_INCLUDE_DIRS})
 
 if (UNIX)
     set(LINUX_LIBS 
