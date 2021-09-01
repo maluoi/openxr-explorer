@@ -4,7 +4,14 @@ project(openxr-explorer VERSION 1.0
 
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 
-find_package(OpenXR 1.0.17 REQUIRED)
+#### OpenXR - https://www.khronos.org/openxr/ ####
+CPMAddPackage(
+  NAME OpenXR
+  VERSION 1.0.19
+  GITHUB_REPOSITORY KhronosGroup/OpenXR-SDK
+  GIT_TAG 6e0ca79dad30d160285c62a1e06aaff55343392a # v1.0.19
+)
+
 if (UNIX)
     find_package(X11 REQUIRED)
     find_package(GLEW REQUIRED)

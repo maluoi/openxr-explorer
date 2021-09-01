@@ -11,19 +11,22 @@ if (NOT EXISTS ${CMAKE_BINARY_DIR}/CMakeCache.txt)
     endif()
 endif()
 
-set(OPENXR_SDK_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/external/OpenXR-SDK")
-set(OPENXR_SDK_BUILD_DIR "${CMAKE_BINARY_DIR}/src/external/OpenXR-SDK")
-set(OPENXR_loader_LIBRARY "${CMAKE_BINARY_DIR}/src/loader/Release/openxr_loader.lib")
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+# See: https://github.com/cpm-cmake/CPM.cmake
+include("cmake/CPM.cmake")
+if (UNIX)
+  # Linux users/devs prefer shared system libraries rather than
+  # static libraries. Linux OpenXR runtimes are responsible for
+  # providing the shared OpenXR loader there. On Windows and
+  # Android, static linking is necessary.
+  set(CPM_USE_LOCAL_PACKAGES ON) # Tell CPM to prefer locally installed packages
+endif()
 
 add_subdirectory(src)
 
 install(TARGETS openxr-explorer xrsetruntime
         DESTINATION bin)
 
-# This is not really recommended yet, as it also installs
-# the OpenXR loader. Doing that could override an existing
-# installed OpenXR loader. Shared libraries are better on Linux.
+# CLI commands for installation on Linux
 #
 # Command to install via cmake:
 #     sudo cmake --install . --prefix /usr/local
