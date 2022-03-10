@@ -7,9 +7,9 @@ set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 #### OpenXR - https://www.khronos.org/openxr/ ####
 CPMAddPackage(
   NAME OpenXR
-  VERSION 1.0.19
+  VERSION 1.0.22
   GITHUB_REPOSITORY KhronosGroup/OpenXR-SDK
-  GIT_TAG 6e0ca79dad30d160285c62a1e06aaff55343392a # v1.0.19
+  GIT_TAG 458984d7f59d1ae6dc1b597d94b02e4f7132eaba # v1.0.22
 )
 
 if (UNIX)

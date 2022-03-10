@@ -114,6 +114,20 @@ const char *openxr_result_string(XrResult result) {
 
 ///////////////////////////////////////////
 
+const char* openxr_path_string(XrPath path) {
+	uint32_t count  = 0;
+	XrResult result = xrPathToString(xr_instance, path, 0, &count, nullptr);
+	if (XR_FAILED(result)) return openxr_result_string(result);
+
+	char* path_str = (char*)malloc(count + 1);
+	result = xrPathToString(xr_instance, path, count, &count, path_str);
+	if (XR_FAILED(result)) return openxr_result_string(result);
+
+	return path_str;
+}
+
+///////////////////////////////////////////
+
 const char *new_string(const char *format, ...) {
 	va_list args;
 	char   *result;
@@ -153,7 +167,7 @@ void openxr_init_instance(array_t<XrExtensionProperties> extensions) {
 	}
 
 	XrInstanceCreateInfo create_info = { XR_TYPE_INSTANCE_CREATE_INFO };
-	create_info.enabledExtensionCount = exts.count;
+	create_info.enabledExtensionCount = (uint32_t)exts.count;
 	create_info.enabledExtensionNames = exts.data;
 	create_info.enabledApiLayerCount  = 0;
 	create_info.enabledApiLayerNames  = nullptr;
@@ -347,18 +361,30 @@ xr_properties_t openxr_load_properties() {
 
 	const char *properties_err = nullptr;
 	if (!xr_instance_err && !xr_system_err) {
-		result.system         = { XR_TYPE_SYSTEM_PROPERTIES };
-		result.hand_tracking  = { XR_TYPE_SYSTEM_HAND_TRACKING_PROPERTIES_EXT };
-		result.hand_mesh      = { XR_TYPE_SYSTEM_HAND_TRACKING_MESH_PROPERTIES_MSFT };
-		result.gaze           = { XR_TYPE_SYSTEM_EYE_GAZE_INTERACTION_PROPERTIES_EXT };
-		result.foveated_varjo = { XR_TYPE_SYSTEM_FOVEATED_RENDERING_PROPERTIES_VARJO };
-		result.color_space_fb = { XR_TYPE_SYSTEM_COLOR_SPACE_PROPERTIES_FB };
+		result.system                = { XR_TYPE_SYSTEM_PROPERTIES };
+		result.hand_tracking         = { XR_TYPE_SYSTEM_HAND_TRACKING_PROPERTIES_EXT };
+		result.hand_mesh             = { XR_TYPE_SYSTEM_HAND_TRACKING_MESH_PROPERTIES_MSFT };
+		result.gaze                  = { XR_TYPE_SYSTEM_EYE_GAZE_INTERACTION_PROPERTIES_EXT };
+		result.foveated_varjo        = { XR_TYPE_SYSTEM_FOVEATED_RENDERING_PROPERTIES_VARJO };
+		result.color_space_fb        = { XR_TYPE_SYSTEM_COLOR_SPACE_PROPERTIES_FB };
+		result.facial_tracking_htc   = { XR_TYPE_SYSTEM_FACIAL_TRACKING_PROPERTIES_HTC };
+		result.keyboard_tracking_fb  = { XR_TYPE_SYSTEM_KEYBOARD_TRACKING_PROPERTIES_FB };
+		result.marker_tracking_varjo = { XR_TYPE_SYSTEM_MARKER_TRACKING_PROPERTIES_VARJO };
+		result.passthrough_fb        = { XR_TYPE_SYSTEM_PASSTHROUGH_PROPERTIES_FB };
+		result.render_model_fb       = { XR_TYPE_SYSTEM_RENDER_MODEL_PROPERTIES_FB };
+		result.space_warp_fb         = { XR_TYPE_SYSTEM_SPACE_WARP_PROPERTIES_FB };
 
-		result.system        .next = &result.hand_tracking;
-		result.hand_tracking .next = &result.hand_mesh;
-		result.hand_mesh     .next = &result.gaze;
-		result.gaze          .next = &result.foveated_varjo;
-		result.foveated_varjo.next = &result.color_space_fb;
+		result.system               .next = &result.hand_tracking;
+		result.hand_tracking        .next = &result.hand_mesh;
+		result.hand_mesh            .next = &result.gaze;
+		result.gaze                 .next = &result.foveated_varjo;
+		result.foveated_varjo       .next = &result.color_space_fb;
+		result.facial_tracking_htc  .next = &result.foveated_varjo;
+		result.keyboard_tracking_fb .next = &result.facial_tracking_htc;
+		result.marker_tracking_varjo.next = &result.keyboard_tracking_fb;
+		result.passthrough_fb       .next = &result.marker_tracking_varjo;
+		result.render_model_fb      .next = &result.passthrough_fb;
+		result.space_warp_fb        .next = &result.render_model_fb;
 
 		XrResult error = xrGetSystemProperties(xr_instance, xr_system_id, &result.system);
 		if (XR_FAILED(error)) {
@@ -446,6 +472,74 @@ xr_properties_t openxr_load_properties() {
 #undef CASE_GET_NAME
 	}
 	table.cols[0].add({"colorSpace"}); table.cols[1].add({color_space_name});
+	xr_tables.add(table);
+
+	table = {};
+	table.name_func    = "xrGetSystemProperties";
+	table.name_type    = "XrSystemFacialTrackingPropertiesHTC";
+	table.spec         = "XrSystemFacialTrackingPropertiesHTC";
+	table.error        = properties_err;
+	table.tag          = display_tag_properties;
+	table.show_type    = true;
+	table.column_count = 2;
+	table.cols[0].add({"supportEyeFacialTracking"}); table.cols[1].add({result.facial_tracking_htc.supportEyeFacialTracking ? "True":"False"});
+	table.cols[0].add({"supportLipFacialTracking"}); table.cols[1].add({result.facial_tracking_htc.supportLipFacialTracking ? "True":"False"});
+	xr_tables.add(table);
+
+	table = {};
+	table.name_func    = "xrGetSystemProperties";
+	table.name_type    = "XrSystemKeyboardTrackingPropertiesFB";
+	table.spec         = "XrSystemKeyboardTrackingPropertiesFB";
+	table.error        = properties_err;
+	table.tag          = display_tag_properties;
+	table.show_type    = true;
+	table.column_count = 2;
+	table.cols[0].add({"supportsKeyboardTracking"}); table.cols[1].add({result.keyboard_tracking_fb.supportsKeyboardTracking ? "True":"False"});
+	xr_tables.add(table);
+
+	table = {};
+	table.name_func    = "xrGetSystemProperties";
+	table.name_type    = "XrSystemMarkerTrackingPropertiesVARJO";
+	table.spec         = "XrSystemMarkerTrackingPropertiesVARJO";
+	table.error        = properties_err;
+	table.tag          = display_tag_properties;
+	table.show_type    = true;
+	table.column_count = 2;
+	table.cols[0].add({"supportsMarkerTracking"}); table.cols[1].add({result.marker_tracking_varjo.supportsMarkerTracking ? "True":"False"});
+	xr_tables.add(table);
+
+	table = {};
+	table.name_func    = "xrGetSystemProperties";
+	table.name_type    = "XrSystemPassthroughPropertiesFB";
+	table.spec         = "XrSystemPassthroughPropertiesFB";
+	table.error        = properties_err;
+	table.tag          = display_tag_properties;
+	table.show_type    = true;
+	table.column_count = 2;
+	table.cols[0].add({"supportsPassthrough"}); table.cols[1].add({result.passthrough_fb.supportsPassthrough ? "True":"False"});
+	xr_tables.add(table);
+
+	table = {};
+	table.name_func    = "xrGetSystemProperties";
+	table.name_type    = "XrSystemRenderModelPropertiesFB";
+	table.spec         = "XrSystemRenderModelPropertiesFB";
+	table.error        = properties_err;
+	table.tag          = display_tag_properties;
+	table.show_type    = true;
+	table.column_count = 2;
+	table.cols[0].add({"supportsRenderModelLoading"}); table.cols[1].add({result.render_model_fb.supportsRenderModelLoading ? "True":"False"});
+	xr_tables.add(table);
+
+	table = {};
+	table.name_func    = "xrGetSystemProperties";
+	table.name_type    = "XrSystemSpaceWarpPropertiesFB";
+	table.spec         = "XrSystemSpaceWarpPropertiesFB";
+	table.error        = properties_err;
+	table.tag          = display_tag_properties;
+	table.show_type    = true;
+	table.column_count = 2;
+	table.cols[0].add({"recommendedMotionVectorImageRectHeight"}); table.cols[1].add({ new_string("%u", result.space_warp_fb.recommendedMotionVectorImageRectHeight) });
+	table.cols[0].add({"recommendedMotionVectorImageRectWidth" }); table.cols[1].add({ new_string("%u", result.space_warp_fb.recommendedMotionVectorImageRectWidth ) });
 	xr_tables.add(table);
 
 	return result;
@@ -674,15 +768,139 @@ void openxr_register_enums() {
 		xrEnumerateColorSpacesFB(xr_session, count, &count, color_spaces.data);
 
 		for (size_t i = 0; i < color_spaces.count; i++) {
-			for (size_t i = 0; i < count; i++) {
-				switch (color_spaces[i]) {
+			switch (color_spaces[i]) {
 #define CASE_GET_NAME(e, val) case e: ref_info->items.add({ #e }); break;
-					XR_LIST_ENUM_XrColorSpaceFB(CASE_GET_NAME)
+				XR_LIST_ENUM_XrColorSpaceFB(CASE_GET_NAME)
 #undef CASE_GET_NAME
-				}
 			}
 		}
 		color_spaces.free();
+		return error;
+	};
+	xr_misc_enums.add(info);
+
+	info = { "xrEnumerateReprojectionModesMSFT" };
+	info.source_type_name = "XrReprojectionModeMSFT";
+	info.spec_link        = "XrReprojectionModeMSFT";
+	info.requires_session = false;
+	info.tag              = display_tag_misc;
+	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
+		PFN_xrEnumerateReprojectionModesMSFT xrEnumerateReprojectionModesMSFT;
+		XrResult error = xrGetInstanceProcAddr(xr_instance, "xrEnumerateReprojectionModesMSFT", (PFN_xrVoidFunction *)(&xrEnumerateReprojectionModesMSFT));
+		if (XR_FAILED(error)) return error;
+
+		uint32_t count = 0;
+		error = xrEnumerateReprojectionModesMSFT(xr_instance, xr_system_id, xr_view.current_config, 0, &count, nullptr);
+		array_t<XrReprojectionModeMSFT> reprojection_modes(count, (XrReprojectionModeMSFT)0);
+		xrEnumerateReprojectionModesMSFT(xr_instance, xr_system_id, xr_view.current_config, count, &count, reprojection_modes.data);
+
+		for (size_t i = 0; i < reprojection_modes.count; i++) {
+			switch (reprojection_modes[i]) {
+#define CASE_GET_NAME(e, val) case e: ref_info->items.add({ #e }); break;
+				XR_LIST_ENUM_XrReprojectionModeMSFT(CASE_GET_NAME)
+#undef CASE_GET_NAME
+			}
+		}
+		reprojection_modes.free();
+		return error;
+	};
+	xr_misc_enums.add(info);
+
+	info = { "xrEnumerateSceneComputeFeaturesMSFT" };
+	info.source_type_name = "XrSceneComputeFeatureMSFT";
+	info.spec_link        = "XrSceneComputeFeatureMSFT";
+	info.requires_session = false;
+	info.tag              = display_tag_misc;
+	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
+		PFN_xrEnumerateSceneComputeFeaturesMSFT xrEnumerateSceneComputeFeaturesMSFT;
+		XrResult error = xrGetInstanceProcAddr(xr_instance, "xrEnumerateSceneComputeFeaturesMSFT", (PFN_xrVoidFunction *)(&xrEnumerateSceneComputeFeaturesMSFT));
+		if (XR_FAILED(error)) return error;
+
+		uint32_t count = 0;
+		error = xrEnumerateSceneComputeFeaturesMSFT(xr_instance, xr_system_id, 0, &count, nullptr);
+		array_t<XrSceneComputeFeatureMSFT> compute_features(count, (XrSceneComputeFeatureMSFT)0);
+		xrEnumerateSceneComputeFeaturesMSFT(xr_instance, xr_system_id, count, &count, compute_features.data);
+
+		for (size_t i = 0; i < compute_features.count; i++) {
+			switch (compute_features[i]) {
+#define CASE_GET_NAME(e, val) case e: ref_info->items.add({ #e }); break;
+				XR_LIST_ENUM_XrSceneComputeFeatureMSFT(CASE_GET_NAME)
+#undef CASE_GET_NAME
+			}
+		}
+		compute_features.free();
+		return error;
+	};
+	xr_misc_enums.add(info);
+
+	info = { "xrEnumerateDisplayRefreshRatesFB" };
+	info.source_type_name = "float";
+	info.spec_link        = "xrEnumerateDisplayRefreshRatesFB";
+	info.requires_session = true;
+	info.tag              = display_tag_misc;
+	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
+		PFN_xrEnumerateDisplayRefreshRatesFB xrEnumerateDisplayRefreshRatesFB;
+		XrResult error = xrGetInstanceProcAddr(xr_instance, "xrEnumerateDisplayRefreshRatesFB", (PFN_xrVoidFunction *)(&xrEnumerateDisplayRefreshRatesFB));
+		if (XR_FAILED(error)) return error;
+
+		uint32_t count = 0;
+		error = xrEnumerateDisplayRefreshRatesFB(xr_session, 0, &count, nullptr);
+		array_t<float> refresh_rates(count, 0);
+		xrEnumerateDisplayRefreshRatesFB(xr_session, count, &count, refresh_rates.data);
+
+		for (size_t i = 0; i < refresh_rates.count; i++) {
+			ref_info->items.add({ new_string("%f", refresh_rates[i])});
+		}
+		refresh_rates.free();
+		return error;
+	};
+	xr_misc_enums.add(info);
+
+	info = { "xrEnumerateViveTrackerPathsHTCX" };
+	info.source_type_name = "XrViveTrackerPathsHTCX";
+	info.spec_link        = "XrViveTrackerPathsHTCX";
+	info.requires_session = false;
+	info.tag              = display_tag_misc;
+	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
+		PFN_xrEnumerateViveTrackerPathsHTCX xrEnumerateViveTrackerPathsHTCX;
+		XrResult error = xrGetInstanceProcAddr(xr_instance, "xrEnumerateViveTrackerPathsHTCX", (PFN_xrVoidFunction *)(&xrEnumerateViveTrackerPathsHTCX));
+		if (XR_FAILED(error)) return error;
+
+		uint32_t count = 0;
+		error = xrEnumerateViveTrackerPathsHTCX(xr_instance, 0, &count, nullptr);
+		array_t<XrViveTrackerPathsHTCX> tracker_paths(count, XrViveTrackerPathsHTCX{ XR_TYPE_VIVE_TRACKER_PATHS_HTCX });
+		xrEnumerateViveTrackerPathsHTCX(xr_instance, count, &count, tracker_paths.data);
+
+		// TODO: This needs labels for persistentPath and rolePath, but the current
+		// structure doens't exactly allow for this.
+		for (size_t i = 0; i < tracker_paths.count; i++) {
+			ref_info->items.add({ openxr_path_string(tracker_paths[i].persistentPath) });
+			ref_info->items.add({ openxr_path_string(tracker_paths[i].rolePath) });
+		}
+		tracker_paths.free();
+		return error;
+	};
+	xr_misc_enums.add(info);
+
+	info = { "xrEnumerateRenderModelPathsFB" };
+	info.source_type_name = "XrRenderModelPathInfoFB";
+	info.spec_link        = "XrRenderModelPathInfoFB";
+	info.requires_session = true;
+	info.tag              = display_tag_misc;
+	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
+		PFN_xrEnumerateRenderModelPathsFB xrEnumerateRenderModelPathsFB;
+		XrResult error = xrGetInstanceProcAddr(xr_instance, "xrEnumerateViveTrackerPathsHTCX", (PFN_xrVoidFunction *)(&xrEnumerateRenderModelPathsFB));
+		if (XR_FAILED(error)) return error;
+
+		uint32_t count = 0;
+		error = xrEnumerateRenderModelPathsFB(xr_session, 0, &count, nullptr);
+		array_t<XrRenderModelPathInfoFB> model_paths(count, XrRenderModelPathInfoFB{ XR_TYPE_RENDER_MODEL_PATH_INFO_FB });
+		xrEnumerateRenderModelPathsFB(xr_session, count, &count, model_paths.data);
+
+		for (size_t i = 0; i < model_paths.count; i++) {
+			ref_info->items.add({ openxr_path_string(model_paths[i].path) });
+		}
+		model_paths.free();
 		return error;
 	};
 	xr_misc_enums.add(info);
