@@ -413,30 +413,6 @@ xr_properties_t openxr_load_properties() {
 
 	table = {};
 	table.name_func = "xrGetSystemProperties";
-	table.name_type = "XrSystemHandTrackingPropertiesEXT";
-	table.spec      = "XrSystemHandTrackingPropertiesEXT";
-	table.error     = properties_err;
-	table.tag       = display_tag_properties;
-	table.show_type = true;
-	table.column_count = 2;
-	table.cols[0].add({"supportsHandTracking"}); table.cols[1].add({result.hand_tracking.supportsHandTracking ? "True":"False"});
-	xr_tables.add(table);
-
-	table = {};
-	table.name_func = "xrGetSystemProperties";
-	table.name_type = "XrSystemHandTrackingMeshPropertiesMSFT";
-	table.spec      = "XrSystemHandTrackingMeshPropertiesMSFT";
-	table.error     = properties_err;
-	table.tag       = display_tag_properties;
-	table.show_type = true;
-	table.column_count = 2;
-	table.cols[0].add({"supportsHandTrackingMesh"}); table.cols[1].add({result.hand_mesh.supportsHandTrackingMesh ? "True":"False"});
-	table.cols[0].add({"maxHandMeshIndexCount"   }); table.cols[1].add({new_string("%u", result.hand_mesh.maxHandMeshIndexCount)});
-	table.cols[0].add({"maxHandMeshVertexCount"  }); table.cols[1].add({new_string("%u", result.hand_mesh.maxHandMeshVertexCount)});
-	xr_tables.add(table);
-
-	table = {};
-	table.name_func = "xrGetSystemProperties";
 	table.name_type = "XrSystemEyeGazeInteractionPropertiesEXT";
 	table.spec      = "XrSystemEyeGazeInteractionPropertiesEXT";
 	table.error     = properties_err;
@@ -448,13 +424,13 @@ xr_properties_t openxr_load_properties() {
 
 	table = {};
 	table.name_func = "xrGetSystemProperties";
-	table.name_type = "XrSystemFoveatedRenderingPropertiesVARJO";
-	table.spec      = "XrSystemFoveatedRenderingPropertiesVARJO";
+	table.name_type = "XrSystemHandTrackingPropertiesEXT";
+	table.spec      = "XrSystemHandTrackingPropertiesEXT";
 	table.error     = properties_err;
 	table.tag       = display_tag_properties;
 	table.show_type = true;
 	table.column_count = 2;
-	table.cols[0].add({"supportsFoveatedRendering"}); table.cols[1].add({result.foveated_varjo.supportsFoveatedRendering ? "True":"False"});
+	table.cols[0].add({"supportsHandTracking"}); table.cols[1].add({result.hand_tracking.supportsHandTracking ? "True":"False"});
 	xr_tables.add(table);
 
 	table = {};
@@ -476,18 +452,6 @@ xr_properties_t openxr_load_properties() {
 
 	table = {};
 	table.name_func    = "xrGetSystemProperties";
-	table.name_type    = "XrSystemFacialTrackingPropertiesHTC";
-	table.spec         = "XrSystemFacialTrackingPropertiesHTC";
-	table.error        = properties_err;
-	table.tag          = display_tag_properties;
-	table.show_type    = true;
-	table.column_count = 2;
-	table.cols[0].add({"supportEyeFacialTracking"}); table.cols[1].add({result.facial_tracking_htc.supportEyeFacialTracking ? "True":"False"});
-	table.cols[0].add({"supportLipFacialTracking"}); table.cols[1].add({result.facial_tracking_htc.supportLipFacialTracking ? "True":"False"});
-	xr_tables.add(table);
-
-	table = {};
-	table.name_func    = "xrGetSystemProperties";
 	table.name_type    = "XrSystemKeyboardTrackingPropertiesFB";
 	table.spec         = "XrSystemKeyboardTrackingPropertiesFB";
 	table.error        = properties_err;
@@ -495,17 +459,6 @@ xr_properties_t openxr_load_properties() {
 	table.show_type    = true;
 	table.column_count = 2;
 	table.cols[0].add({"supportsKeyboardTracking"}); table.cols[1].add({result.keyboard_tracking_fb.supportsKeyboardTracking ? "True":"False"});
-	xr_tables.add(table);
-
-	table = {};
-	table.name_func    = "xrGetSystemProperties";
-	table.name_type    = "XrSystemMarkerTrackingPropertiesVARJO";
-	table.spec         = "XrSystemMarkerTrackingPropertiesVARJO";
-	table.error        = properties_err;
-	table.tag          = display_tag_properties;
-	table.show_type    = true;
-	table.column_count = 2;
-	table.cols[0].add({"supportsMarkerTracking"}); table.cols[1].add({result.marker_tracking_varjo.supportsMarkerTracking ? "True":"False"});
 	xr_tables.add(table);
 
 	table = {};
@@ -540,6 +493,53 @@ xr_properties_t openxr_load_properties() {
 	table.column_count = 2;
 	table.cols[0].add({"recommendedMotionVectorImageRectHeight"}); table.cols[1].add({ new_string("%u", result.space_warp_fb.recommendedMotionVectorImageRectHeight) });
 	table.cols[0].add({"recommendedMotionVectorImageRectWidth" }); table.cols[1].add({ new_string("%u", result.space_warp_fb.recommendedMotionVectorImageRectWidth ) });
+	xr_tables.add(table);
+
+	table = {};
+	table.name_func    = "xrGetSystemProperties";
+	table.name_type    = "XrSystemFacialTrackingPropertiesHTC";
+	table.spec         = "XrSystemFacialTrackingPropertiesHTC";
+	table.error        = properties_err;
+	table.tag          = display_tag_properties;
+	table.show_type    = true;
+	table.column_count = 2;
+	table.cols[0].add({"supportEyeFacialTracking"}); table.cols[1].add({result.facial_tracking_htc.supportEyeFacialTracking ? "True":"False"});
+	table.cols[0].add({"supportLipFacialTracking"}); table.cols[1].add({result.facial_tracking_htc.supportLipFacialTracking ? "True":"False"});
+	xr_tables.add(table);
+
+	table = {};
+	table.name_func = "xrGetSystemProperties";
+	table.name_type = "XrSystemHandTrackingMeshPropertiesMSFT";
+	table.spec      = "XrSystemHandTrackingMeshPropertiesMSFT";
+	table.error     = properties_err;
+	table.tag       = display_tag_properties;
+	table.show_type = true;
+	table.column_count = 2;
+	table.cols[0].add({"supportsHandTrackingMesh"}); table.cols[1].add({result.hand_mesh.supportsHandTrackingMesh ? "True":"False"});
+	table.cols[0].add({"maxHandMeshIndexCount"   }); table.cols[1].add({new_string("%u", result.hand_mesh.maxHandMeshIndexCount)});
+	table.cols[0].add({"maxHandMeshVertexCount"  }); table.cols[1].add({new_string("%u", result.hand_mesh.maxHandMeshVertexCount)});
+	xr_tables.add(table);
+
+	table = {};
+	table.name_func = "xrGetSystemProperties";
+	table.name_type = "XrSystemFoveatedRenderingPropertiesVARJO";
+	table.spec      = "XrSystemFoveatedRenderingPropertiesVARJO";
+	table.error     = properties_err;
+	table.tag       = display_tag_properties;
+	table.show_type = true;
+	table.column_count = 2;
+	table.cols[0].add({"supportsFoveatedRendering"}); table.cols[1].add({result.foveated_varjo.supportsFoveatedRendering ? "True":"False"});
+	xr_tables.add(table);
+
+	table = {};
+	table.name_func    = "xrGetSystemProperties";
+	table.name_type    = "XrSystemMarkerTrackingPropertiesVARJO";
+	table.spec         = "XrSystemMarkerTrackingPropertiesVARJO";
+	table.error        = properties_err;
+	table.tag          = display_tag_properties;
+	table.show_type    = true;
+	table.column_count = 2;
+	table.cols[0].add({"supportsMarkerTracking"}); table.cols[1].add({result.marker_tracking_varjo.supportsMarkerTracking ? "True":"False"});
 	xr_tables.add(table);
 
 	return result;
@@ -779,6 +779,78 @@ void openxr_register_enums() {
 	};
 	xr_misc_enums.add(info);
 
+	info = { "xrEnumerateDisplayRefreshRatesFB" };
+	info.source_type_name = "float";
+	info.spec_link        = "xrEnumerateDisplayRefreshRatesFB";
+	info.requires_session = true;
+	info.tag              = display_tag_misc;
+	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
+		PFN_xrEnumerateDisplayRefreshRatesFB xrEnumerateDisplayRefreshRatesFB;
+		XrResult error = xrGetInstanceProcAddr(xr_instance, "xrEnumerateDisplayRefreshRatesFB", (PFN_xrVoidFunction *)(&xrEnumerateDisplayRefreshRatesFB));
+		if (XR_FAILED(error)) return error;
+
+		uint32_t count = 0;
+		error = xrEnumerateDisplayRefreshRatesFB(xr_session, 0, &count, nullptr);
+		array_t<float> refresh_rates(count, 0);
+		xrEnumerateDisplayRefreshRatesFB(xr_session, count, &count, refresh_rates.data);
+
+		for (size_t i = 0; i < refresh_rates.count; i++) {
+			ref_info->items.add({ new_string("%f", refresh_rates[i])});
+		}
+		refresh_rates.free();
+		return error;
+	};
+	xr_misc_enums.add(info);
+
+	info = { "xrEnumerateRenderModelPathsFB" };
+	info.source_type_name = "XrRenderModelPathInfoFB";
+	info.spec_link        = "XrRenderModelPathInfoFB";
+	info.requires_session = true;
+	info.tag              = display_tag_misc;
+	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
+		PFN_xrEnumerateRenderModelPathsFB xrEnumerateRenderModelPathsFB;
+		XrResult error = xrGetInstanceProcAddr(xr_instance, "xrEnumerateViveTrackerPathsHTCX", (PFN_xrVoidFunction *)(&xrEnumerateRenderModelPathsFB));
+		if (XR_FAILED(error)) return error;
+
+		uint32_t count = 0;
+		error = xrEnumerateRenderModelPathsFB(xr_session, 0, &count, nullptr);
+		array_t<XrRenderModelPathInfoFB> model_paths(count, XrRenderModelPathInfoFB{ XR_TYPE_RENDER_MODEL_PATH_INFO_FB });
+		xrEnumerateRenderModelPathsFB(xr_session, count, &count, model_paths.data);
+
+		for (size_t i = 0; i < model_paths.count; i++) {
+			ref_info->items.add({ openxr_path_string(model_paths[i].path) });
+		}
+		model_paths.free();
+		return error;
+	};
+	xr_misc_enums.add(info);
+
+	info = { "xrEnumerateViveTrackerPathsHTCX" };
+	info.source_type_name = "XrViveTrackerPathsHTCX";
+	info.spec_link        = "XrViveTrackerPathsHTCX";
+	info.requires_session = false;
+	info.tag              = display_tag_misc;
+	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
+		PFN_xrEnumerateViveTrackerPathsHTCX xrEnumerateViveTrackerPathsHTCX;
+		XrResult error = xrGetInstanceProcAddr(xr_instance, "xrEnumerateViveTrackerPathsHTCX", (PFN_xrVoidFunction *)(&xrEnumerateViveTrackerPathsHTCX));
+		if (XR_FAILED(error)) return error;
+
+		uint32_t count = 0;
+		error = xrEnumerateViveTrackerPathsHTCX(xr_instance, 0, &count, nullptr);
+		array_t<XrViveTrackerPathsHTCX> tracker_paths(count, XrViveTrackerPathsHTCX{ XR_TYPE_VIVE_TRACKER_PATHS_HTCX });
+		xrEnumerateViveTrackerPathsHTCX(xr_instance, count, &count, tracker_paths.data);
+
+		// TODO: This needs labels for persistentPath and rolePath, but the current
+		// structure doens't exactly allow for this.
+		for (size_t i = 0; i < tracker_paths.count; i++) {
+			ref_info->items.add({ openxr_path_string(tracker_paths[i].persistentPath) });
+			ref_info->items.add({ openxr_path_string(tracker_paths[i].rolePath) });
+		}
+		tracker_paths.free();
+		return error;
+	};
+	xr_misc_enums.add(info);
+
 	info = { "xrEnumerateReprojectionModesMSFT" };
 	info.source_type_name = "XrReprojectionModeMSFT";
 	info.spec_link        = "XrReprojectionModeMSFT";
@@ -829,78 +901,6 @@ void openxr_register_enums() {
 			}
 		}
 		compute_features.free();
-		return error;
-	};
-	xr_misc_enums.add(info);
-
-	info = { "xrEnumerateDisplayRefreshRatesFB" };
-	info.source_type_name = "float";
-	info.spec_link        = "xrEnumerateDisplayRefreshRatesFB";
-	info.requires_session = true;
-	info.tag              = display_tag_misc;
-	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
-		PFN_xrEnumerateDisplayRefreshRatesFB xrEnumerateDisplayRefreshRatesFB;
-		XrResult error = xrGetInstanceProcAddr(xr_instance, "xrEnumerateDisplayRefreshRatesFB", (PFN_xrVoidFunction *)(&xrEnumerateDisplayRefreshRatesFB));
-		if (XR_FAILED(error)) return error;
-
-		uint32_t count = 0;
-		error = xrEnumerateDisplayRefreshRatesFB(xr_session, 0, &count, nullptr);
-		array_t<float> refresh_rates(count, 0);
-		xrEnumerateDisplayRefreshRatesFB(xr_session, count, &count, refresh_rates.data);
-
-		for (size_t i = 0; i < refresh_rates.count; i++) {
-			ref_info->items.add({ new_string("%f", refresh_rates[i])});
-		}
-		refresh_rates.free();
-		return error;
-	};
-	xr_misc_enums.add(info);
-
-	info = { "xrEnumerateViveTrackerPathsHTCX" };
-	info.source_type_name = "XrViveTrackerPathsHTCX";
-	info.spec_link        = "XrViveTrackerPathsHTCX";
-	info.requires_session = false;
-	info.tag              = display_tag_misc;
-	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
-		PFN_xrEnumerateViveTrackerPathsHTCX xrEnumerateViveTrackerPathsHTCX;
-		XrResult error = xrGetInstanceProcAddr(xr_instance, "xrEnumerateViveTrackerPathsHTCX", (PFN_xrVoidFunction *)(&xrEnumerateViveTrackerPathsHTCX));
-		if (XR_FAILED(error)) return error;
-
-		uint32_t count = 0;
-		error = xrEnumerateViveTrackerPathsHTCX(xr_instance, 0, &count, nullptr);
-		array_t<XrViveTrackerPathsHTCX> tracker_paths(count, XrViveTrackerPathsHTCX{ XR_TYPE_VIVE_TRACKER_PATHS_HTCX });
-		xrEnumerateViveTrackerPathsHTCX(xr_instance, count, &count, tracker_paths.data);
-
-		// TODO: This needs labels for persistentPath and rolePath, but the current
-		// structure doens't exactly allow for this.
-		for (size_t i = 0; i < tracker_paths.count; i++) {
-			ref_info->items.add({ openxr_path_string(tracker_paths[i].persistentPath) });
-			ref_info->items.add({ openxr_path_string(tracker_paths[i].rolePath) });
-		}
-		tracker_paths.free();
-		return error;
-	};
-	xr_misc_enums.add(info);
-
-	info = { "xrEnumerateRenderModelPathsFB" };
-	info.source_type_name = "XrRenderModelPathInfoFB";
-	info.spec_link        = "XrRenderModelPathInfoFB";
-	info.requires_session = true;
-	info.tag              = display_tag_misc;
-	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
-		PFN_xrEnumerateRenderModelPathsFB xrEnumerateRenderModelPathsFB;
-		XrResult error = xrGetInstanceProcAddr(xr_instance, "xrEnumerateViveTrackerPathsHTCX", (PFN_xrVoidFunction *)(&xrEnumerateRenderModelPathsFB));
-		if (XR_FAILED(error)) return error;
-
-		uint32_t count = 0;
-		error = xrEnumerateRenderModelPathsFB(xr_session, 0, &count, nullptr);
-		array_t<XrRenderModelPathInfoFB> model_paths(count, XrRenderModelPathInfoFB{ XR_TYPE_RENDER_MODEL_PATH_INFO_FB });
-		xrEnumerateRenderModelPathsFB(xr_session, count, &count, model_paths.data);
-
-		for (size_t i = 0; i < model_paths.count; i++) {
-			ref_info->items.add({ openxr_path_string(model_paths[i].path) });
-		}
-		model_paths.free();
 		return error;
 	};
 	xr_misc_enums.add(info);
