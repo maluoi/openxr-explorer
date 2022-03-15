@@ -809,7 +809,7 @@ void openxr_register_enums() {
 	info.tag              = display_tag_misc;
 	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
 		PFN_xrEnumerateRenderModelPathsFB xrEnumerateRenderModelPathsFB;
-		XrResult error = xrGetInstanceProcAddr(xr_instance, "xrEnumerateViveTrackerPathsHTCX", (PFN_xrVoidFunction *)(&xrEnumerateRenderModelPathsFB));
+		XrResult error = xrGetInstanceProcAddr(xr_instance, "xrEnumerateRenderModelPathsFB", (PFN_xrVoidFunction *)(&xrEnumerateRenderModelPathsFB));
 		if (XR_FAILED(error)) return error;
 
 		uint32_t count = 0;
