@@ -379,12 +379,12 @@ xr_properties_t openxr_load_properties() {
 		result.hand_mesh            .next = &result.gaze;
 		result.gaze                 .next = &result.foveated_varjo;
 		result.foveated_varjo       .next = &result.color_space_fb;
-		result.facial_tracking_htc  .next = &result.foveated_varjo;
-		result.keyboard_tracking_fb .next = &result.facial_tracking_htc;
-		result.marker_tracking_varjo.next = &result.keyboard_tracking_fb;
-		result.passthrough_fb       .next = &result.marker_tracking_varjo;
-		result.render_model_fb      .next = &result.passthrough_fb;
-		result.space_warp_fb        .next = &result.render_model_fb;
+		result.color_space_fb       .next = &result.facial_tracking_htc;
+		result.facial_tracking_htc  .next = &result.keyboard_tracking_fb;
+		result.keyboard_tracking_fb .next = &result.marker_tracking_varjo;
+		result.marker_tracking_varjo.next = &result.passthrough_fb;
+		result.passthrough_fb       .next = &result.render_model_fb;
+		result.render_model_fb      .next = &result.space_warp_fb;
 
 		XrResult error = xrGetSystemProperties(xr_instance, xr_system_id, &result.system);
 		if (XR_FAILED(error)) {
