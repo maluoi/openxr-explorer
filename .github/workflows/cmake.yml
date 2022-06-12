@@ -29,3 +29,21 @@ jobs:
 
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} --parallel 8
+
+    - name: Pack
+      run: |
+        if ("${{ matrix.os }}" -eq "windows-latest") {
+          $fileName = "openxr-explorer-win-x64.zip"
+          $paths = $(Join-Path "build" "Release" "openxr-explorer.exe"), $(Join-Path "build" "Release" "xrsetruntime.exe")
+        } else {
+          $fileName = "openxr-explorer-linux-x64.zip"
+          $paths = $(Join-Path "build" "openxr-explorer"), $(Join-Path "build" "xrsetruntime")
+        }
+        Compress-Archive -Force -Path $paths -DestinationPath $fileName
+      shell: pwsh
+
+    - name: Publish
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ matrix.os }}
+        path: "*.zip"
