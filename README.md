@@ -39,7 +39,7 @@ openxr-explorer.exe
 #### Linux
 Pre-requisites (partial)
 ```
-sudo apt-get install libxcb-keysyms1-dev libxcb1-dev libxcb-xfixes0-dev libxcb-cursor-dev libxcb-xkb-dev libxcb-glx0-dev libxcb-randr0-dev libx11-xcb-dev
+sudo apt-get install libxcb-keysyms1-dev libxcb1-dev libxcb-xfixes0-dev libxcb-cursor-dev libxcb-xkb-dev libxcb-glx0-dev libxcb-randr0-dev libx11-xcb-dev libglew-dev
 ```
 
 From the root directory:
