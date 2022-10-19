@@ -35,6 +35,8 @@ const char *xr_session_err  = nullptr;
 XrSystemId  xr_system_id    = {};
 const char *xr_system_err   = nullptr;
 
+#define XR_NEXT_INSERT(obj, obj_next) obj_next.next = obj.next; obj.next = &obj_next;
+
 /*** Signatures **************************/
 
 void openxr_init_instance(array_t<XrExtensionProperties> extensions);
@@ -372,19 +374,21 @@ xr_properties_t openxr_load_properties() {
 		result.marker_tracking_varjo = { XR_TYPE_SYSTEM_MARKER_TRACKING_PROPERTIES_VARJO };
 		result.passthrough_fb        = { XR_TYPE_SYSTEM_PASSTHROUGH_PROPERTIES_FB };
 		result.render_model_fb       = { XR_TYPE_SYSTEM_RENDER_MODEL_PROPERTIES_FB };
+		result.spatial_entity_fb     = { XR_TYPE_SYSTEM_SPATIAL_ENTITY_PROPERTIES_FB };
 		result.space_warp_fb         = { XR_TYPE_SYSTEM_SPACE_WARP_PROPERTIES_FB };
 
-		result.system               .next = &result.hand_tracking;
-		result.hand_tracking        .next = &result.hand_mesh;
-		result.hand_mesh            .next = &result.gaze;
-		result.gaze                 .next = &result.foveated_varjo;
-		result.foveated_varjo       .next = &result.color_space_fb;
-		result.color_space_fb       .next = &result.facial_tracking_htc;
-		result.facial_tracking_htc  .next = &result.keyboard_tracking_fb;
-		result.keyboard_tracking_fb .next = &result.marker_tracking_varjo;
-		result.marker_tracking_varjo.next = &result.passthrough_fb;
-		result.passthrough_fb       .next = &result.render_model_fb;
-		result.render_model_fb      .next = &result.space_warp_fb;
+		XR_NEXT_INSERT(result.system, result.hand_tracking);
+		XR_NEXT_INSERT(result.system, result.hand_mesh);
+		XR_NEXT_INSERT(result.system, result.gaze);
+		XR_NEXT_INSERT(result.system, result.foveated_varjo);
+		XR_NEXT_INSERT(result.system, result.color_space_fb);
+		XR_NEXT_INSERT(result.system, result.facial_tracking_htc);
+		XR_NEXT_INSERT(result.system, result.keyboard_tracking_fb);
+		XR_NEXT_INSERT(result.system, result.marker_tracking_varjo);
+		XR_NEXT_INSERT(result.system, result.passthrough_fb);
+		XR_NEXT_INSERT(result.system, result.render_model_fb);
+		XR_NEXT_INSERT(result.system, result.spatial_entity_fb);
+		XR_NEXT_INSERT(result.system, result.space_warp_fb);
 
 		XrResult error = xrGetSystemProperties(xr_instance, xr_system_id, &result.system);
 		if (XR_FAILED(error)) {
@@ -493,6 +497,17 @@ xr_properties_t openxr_load_properties() {
 	table.column_count = 2;
 	table.cols[0].add({"recommendedMotionVectorImageRectHeight"}); table.cols[1].add({ new_string("%u", result.space_warp_fb.recommendedMotionVectorImageRectHeight) });
 	table.cols[0].add({"recommendedMotionVectorImageRectWidth" }); table.cols[1].add({ new_string("%u", result.space_warp_fb.recommendedMotionVectorImageRectWidth ) });
+	xr_tables.add(table);
+
+	table = {};
+	table.name_func    = "xrGetSystemProperties";
+	table.name_type    = "XrSystemSpatialEntityPropertiesFB ";
+	table.spec         = "XrSystemSpatialEntityPropertiesFB";
+	table.error        = properties_err;
+	table.tag          = display_tag_properties;
+	table.show_type    = true;
+	table.column_count = 2;
+	table.cols[0].add({ "supportsSpatialEntity" }); table.cols[1].add({ result.spatial_entity_fb.supportsSpatialEntity ? "True" : "False" });
 	xr_tables.add(table);
 
 	table = {};
@@ -847,6 +862,29 @@ void openxr_register_enums() {
 			ref_info->items.add({ openxr_path_string(tracker_paths[i].rolePath) });
 		}
 		tracker_paths.free();
+		return error;
+	};
+	xr_misc_enums.add(info);
+
+	info = { "xrEnumeratePerformanceMetricsCounterPathsMETA" };
+	info.source_type_name = "XrPath";
+	info.spec_link        = "xrEnumeratePerformanceMetricsCounterPathsMETA";
+	info.requires_session = false;
+	info.tag              = display_tag_misc;
+	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
+		PFN_xrEnumeratePerformanceMetricsCounterPathsMETA xrEnumeratePerformanceMetricsCounterPathsMETA;
+		XrResult error = xrGetInstanceProcAddr(xr_instance, "xrEnumeratePerformanceMetricsCounterPathsMETA", (PFN_xrVoidFunction *)(&xrEnumeratePerformanceMetricsCounterPathsMETA));
+		if (XR_FAILED(error)) return error;
+
+		uint32_t count = 0;
+		error = xrEnumeratePerformanceMetricsCounterPathsMETA(xr_instance, 0, &count, nullptr);
+		array_t<XrPath> metric_paths(count, {});
+		xrEnumeratePerformanceMetricsCounterPathsMETA(xr_instance, count, &count, metric_paths.data);
+
+		for (size_t i = 0; i < metric_paths.count; i++) {
+			ref_info->items.add({ openxr_path_string(metric_paths[i]) });
+		}
+		metric_paths.free();
 		return error;
 	};
 	xr_misc_enums.add(info);

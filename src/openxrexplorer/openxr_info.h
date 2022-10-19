@@ -73,6 +73,7 @@ struct xr_properties_t {
 	XrSystemMarkerTrackingPropertiesVARJO    marker_tracking_varjo;
 	XrSystemPassthroughPropertiesFB          passthrough_fb;
 	XrSystemRenderModelPropertiesFB          render_model_fb;
+	XrSystemSpatialEntityPropertiesFB        spatial_entity_fb;
 	XrSystemSpaceWarpPropertiesFB            space_warp_fb;
 };
 
