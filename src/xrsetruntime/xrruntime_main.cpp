@@ -21,7 +21,7 @@ int  strcmp_nocase   (char const *a, char const *b);
 /*** Code ********************************/
 
 int main(int32_t arg_count, const char **args) {
-	if (!load_runtimes("xr_runtimes.txt", &runtimes, &runtime_count))
+	if (!load_runtimes("runtimes.txt", &runtimes, &runtime_count))
 		return -1;
 
 	if (arg_count < 2) show_help();
