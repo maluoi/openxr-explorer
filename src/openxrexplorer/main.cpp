@@ -204,7 +204,6 @@ void app_window_runtime() {
 ///////////////////////////////////////////
 
 void app_window_openxr_functionality() {
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 	ImGui::Begin("Extensions & Layers");
 
 	for (size_t i = 0; i < xr_tables.count; i++) {
@@ -213,7 +212,6 @@ void app_window_openxr_functionality() {
 	}
 
 	ImGui::End();
-	ImGui::PopStyleVar();
 }
 
 ///////////////////////////////////////////
@@ -257,6 +255,9 @@ void app_window_view() {
 ///////////////////////////////////////////
 
 void app_element_table(const display_table_t *table) {
+	const float  text_col = 0.7f;
+	const ImVec4 text_vec = ImVec4{ text_col,text_col,text_col,1 };
+
 	if (ImGui::TreeNodeEx(table->show_type ? table->name_type : table->name_func, ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_AllowItemOverlap)) {
 		if (table->spec) {
 			ImGui::SameLine(ImGui::GetContentRegionMax().x - (ImGui::CalcTextSize("Open Spec").x + GImGui->Style.FramePadding.x * 3));
@@ -273,7 +274,10 @@ void app_element_table(const display_table_t *table) {
 			if (ImGui::BeginTable(table->name_type, 1, flags)) {
 				ImGui::TableNextRow();
 				ImGui::TableNextColumn();
+
+				ImGui::PushStyleColor(ImGuiCol_Text, text_vec);
 				ImGui::Text("%s", table->error);
+				ImGui::PopStyleColor();
 
 				ImGui::EndTable();
 			}
@@ -284,20 +288,26 @@ void app_element_table(const display_table_t *table) {
 				ImGui::TableHeadersRow();
 			}
 
+			ImGui::PushStyleColor(ImGuiCol_Text, text_vec);
+
 			for (size_t i = table->header_row?1:0; i < table->cols[0].count; i++) {
 				ImGui::TableNextRow();
 				for (size_t c = 0; c < table->column_count; c++) {
 					ImGui::TableNextColumn(); 
 					if (table->cols[c][i].spec) {
 						ImGui::PushID(i);
+						ImGui::PopStyleColor();
 						if (ImGui::Button("Spec"))
 							app_open_spec(table->cols[c][i].spec);
+						ImGui::PushStyleColor(ImGuiCol_Text, text_vec);
 						ImGui::PopID();
 					} else {
 						ImGui::Text("%s", table->cols[c][i].text);
 					}
 				}
 			}
+
+			ImGui::PopStyleColor();
 			ImGui::EndTable();
 		}
 
