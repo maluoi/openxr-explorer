@@ -35,6 +35,8 @@ const char *xr_session_err  = nullptr;
 XrSystemId  xr_system_id    = {};
 const char *xr_system_err   = nullptr;
 
+const char* xr_runtime_name = "No runtime set";
+
 #define XR_NEXT_INSERT(obj, obj_next) obj_next.next = obj.next; obj.next = &obj_next;
 
 /*** Signatures **************************/
@@ -85,6 +87,7 @@ void openxr_info_release() {
 	xr_extensions.extensions.free();
 	xr_extensions.layers    .free();
 	xr_extensions = {};
+	xr_runtime_name = "No runtime set";
 
 	xr_table_strings.each(free);
 	xr_table_strings.free();
@@ -182,6 +185,8 @@ void openxr_init_instance(array_t<XrExtensionProperties> extensions) {
 	XrResult result = xrCreateInstance(&create_info, &xr_instance);
 	if (XR_FAILED(result)) {
 		xr_instance_err = openxr_result_string(result);
+		xr_system_err   = "No XrInstance available";
+		xr_session_err  = "No XrInstance available";
 	}
 }
 
@@ -189,7 +194,8 @@ void openxr_init_instance(array_t<XrExtensionProperties> extensions) {
 
 void openxr_init_system(XrFormFactor form) {
 	if (xr_instance_err != nullptr) {
-		xr_system_err = "XrInstance not available!";
+		xr_system_err  = "No XrInstance available";
+		xr_session_err = "No XrInstance available";
 		return;
 	}
 	if (xr_system_id != XR_NULL_SYSTEM_ID || xr_system_err != nullptr) 
@@ -200,6 +206,7 @@ void openxr_init_system(XrFormFactor form) {
 	XrResult result = xrGetSystem(xr_instance, &system_info, &xr_system_id);
 	if (XR_FAILED(result)) {
 		xr_system_err = openxr_result_string(result);
+		xr_session_err = "No XrSystemId available";
 	}
 }
 
@@ -207,11 +214,11 @@ void openxr_init_system(XrFormFactor form) {
 
 void openxr_init_session() {
 	if (xr_instance_err != nullptr) {
-		xr_session_err = "XrInstance not available!";
+		xr_session_err = "No XrInstance available";
 		return;
 	}
 	if (xr_system_err != nullptr) {
-		xr_session_err = "XrSystemId not available!";
+		xr_session_err = "No XrSystemId available";
 		return;
 	}
 	if (xr_session != XR_NULL_HANDLE || xr_session_err != nullptr)
@@ -348,6 +355,7 @@ xr_properties_t openxr_load_properties() {
 		if (XR_FAILED(error)) {
 			table.error = openxr_result_string(error);
 		} else {
+			xr_runtime_name = new_string("%s", result.instance.runtimeName);
 			table.cols[0].add({ "runtimeName"    }); table.cols[1].add({ new_string("%s", result.instance.runtimeName) });
 			table.cols[0].add({ "runtimeVersion" }); table.cols[1].add({ new_string("%d.%d.%d",
 				(int32_t)XR_VERSION_MAJOR(result.instance.runtimeVersion),
@@ -646,29 +654,49 @@ xr_view_info_t openxr_load_view(XrViewConfigurationType view_config) {
 ///////////////////////////////////////////
 
 void openxr_load_enums(xr_settings_t settings) {
+	// Check if any of the enums need a session
+	if (!xr_session_err && settings.allow_session) {
+		bool requires_session = false;
+		for (size_t i = 0; i < xr_misc_enums.count; i++) {
+			requires_session = requires_session || xr_misc_enums[i].requires_session;
+		}
+		if (requires_session) {
+			openxr_init_session();
+		}
+	} else if (!xr_session_err) {
+		xr_session_err = "Reload with Session enabled";
+	}
+
 	for (size_t i = 0; i < xr_misc_enums.count; i++) {
 		xr_misc_enums[i].items.clear();
-		if (!xr_misc_enums[i].requires_session || settings.allow_session) {
-			if (xr_misc_enums[i].requires_session) 
-				openxr_init_session();
+
+		display_table_t table = {};
+		table.name_func = xr_misc_enums[i].source_fn_name;
+		table.name_type = xr_misc_enums[i].source_type_name;
+		table.spec      = xr_misc_enums[i].spec_link;
+		table.tag       = xr_misc_enums[i].tag;
+		table.column_count = 1;
+
+		if ((!xr_misc_enums[i].requires_session  || !xr_session_err ) &&
+			(!xr_misc_enums[i].requires_instance || !xr_instance_err) &&
+			(!xr_misc_enums[i].requires_system   || !xr_system_err  )) {
+
 			XrResult error = xr_misc_enums[i].load_info(&xr_misc_enums[i], settings);
 
-			display_table_t table = {};
-			table.name_func = xr_misc_enums[i].source_fn_name;
-			table.name_type = xr_misc_enums[i].source_type_name;
-			table.spec      = xr_misc_enums[i].spec_link;
-			table.tag       = xr_misc_enums[i].tag;
-			table.column_count = 1;
 			for (size_t e = 0; e < xr_misc_enums[i].items.count; e++) {
 				table.cols[0].add({ xr_misc_enums[i].items[e] });
 			}
 			if (XR_FAILED(error)) {
 				table.error = openxr_result_string(error);
 			}
-			xr_tables.add(table);
 		} else {
-			xr_misc_enums[i].items.add("XrSession unavailable!");
+
+			if      (xr_misc_enums[i].requires_instance && xr_instance_err) table.error = "No XrInstance available";
+			else if (xr_misc_enums[i].requires_system   && xr_system_err  ) table.error = "No XrSystemId available";
+			else if (xr_misc_enums[i].requires_session  && xr_session_err ) table.error = "No XrSession available";
 		}
+
+		xr_tables.add(table);
 	}
 }
 
@@ -703,7 +731,8 @@ void openxr_register_enums() {
 	info = { "xrEnumerateEnvironmentBlendModes" };
 	info.source_type_name = "XrEnvironmentBlendMode";
 	info.spec_link        = "XrEnvironmentBlendMode";
-	info.requires_session = false;
+	info.requires_instance= true;
+	info.requires_system  = true;
 	info.tag              = display_tag_view;
 	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
 		if (settings.view_config == 0) {
@@ -771,6 +800,7 @@ void openxr_register_enums() {
 	info.source_type_name = "XrColorSpaceFB";
 	info.spec_link        = "XrColorSpaceFB";
 	info.requires_session = true;
+	info.requires_instance= true;
 	info.tag              = display_tag_misc;
 	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
 		PFN_xrEnumerateColorSpacesFB xrEnumerateColorSpacesFB;
@@ -798,6 +828,7 @@ void openxr_register_enums() {
 	info.source_type_name = "float";
 	info.spec_link        = "xrEnumerateDisplayRefreshRatesFB";
 	info.requires_session = true;
+	info.requires_instance= true;
 	info.tag              = display_tag_misc;
 	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
 		PFN_xrEnumerateDisplayRefreshRatesFB xrEnumerateDisplayRefreshRatesFB;
@@ -821,6 +852,7 @@ void openxr_register_enums() {
 	info.source_type_name = "XrRenderModelPathInfoFB";
 	info.spec_link        = "XrRenderModelPathInfoFB";
 	info.requires_session = true;
+	info.requires_instance= true;
 	info.tag              = display_tag_misc;
 	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
 		PFN_xrEnumerateRenderModelPathsFB xrEnumerateRenderModelPathsFB;
@@ -843,7 +875,7 @@ void openxr_register_enums() {
 	info = { "xrEnumerateViveTrackerPathsHTCX" };
 	info.source_type_name = "XrViveTrackerPathsHTCX";
 	info.spec_link        = "XrViveTrackerPathsHTCX";
-	info.requires_session = false;
+	info.requires_instance= true;
 	info.tag              = display_tag_misc;
 	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
 		PFN_xrEnumerateViveTrackerPathsHTCX xrEnumerateViveTrackerPathsHTCX;
@@ -869,7 +901,7 @@ void openxr_register_enums() {
 	info = { "xrEnumeratePerformanceMetricsCounterPathsMETA" };
 	info.source_type_name = "XrPath";
 	info.spec_link        = "xrEnumeratePerformanceMetricsCounterPathsMETA";
-	info.requires_session = false;
+	info.requires_instance= true;
 	info.tag              = display_tag_misc;
 	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
 		PFN_xrEnumeratePerformanceMetricsCounterPathsMETA xrEnumeratePerformanceMetricsCounterPathsMETA;
@@ -892,7 +924,8 @@ void openxr_register_enums() {
 	info = { "xrEnumerateReprojectionModesMSFT" };
 	info.source_type_name = "XrReprojectionModeMSFT";
 	info.spec_link        = "XrReprojectionModeMSFT";
-	info.requires_session = false;
+	info.requires_system  = true;
+	info.requires_instance= true;
 	info.tag              = display_tag_misc;
 	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
 		PFN_xrEnumerateReprojectionModesMSFT xrEnumerateReprojectionModesMSFT;
@@ -919,7 +952,8 @@ void openxr_register_enums() {
 	info = { "xrEnumerateSceneComputeFeaturesMSFT" };
 	info.source_type_name = "XrSceneComputeFeatureMSFT";
 	info.spec_link        = "XrSceneComputeFeatureMSFT";
-	info.requires_session = false;
+	info.requires_system  = true;
+	info.requires_instance= true;
 	info.tag              = display_tag_misc;
 	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
 		PFN_xrEnumerateSceneComputeFeaturesMSFT xrEnumerateSceneComputeFeaturesMSFT;
