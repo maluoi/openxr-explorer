@@ -44,25 +44,38 @@ bool app_args(int32_t arg_count, const char **args) {
 bool app_init() {
 	ImGuiStyle* style = &ImGui::GetStyle();
 	ImVec4* colors = style->Colors;
-	style->FrameRounding = 1;
+	style->FrameRounding = 2;
+	style->FramePadding  = ImVec2{ 6, 4 };
+	style->WindowPadding = ImVec2{ 10, 10 };
+	style->ScrollbarRounding = 1;
+	style->AntiAliasedFill        = false;
+	style->AntiAliasedLines       = false;
+	style->AntiAliasedLinesUseTex = false;
+
 
 	ImVec4 major    = ImVec4(0.471f, 0.169f, 0.565f, 1.00f);
-	ImVec4 mid      = ImVec4(major.x*0.75f, major.y*0.75f, major.z*0.75f, 1);
-	ImVec4 minor    = ImVec4(major.x*0.5f, major.y*0.5f, major.z*0.5f, 1);
-	ImVec4 barely   = ImVec4(major.x*0.3f, major.y*0.3f, major.z*0.3f, 1);
+	ImVec4 desat    = ImVec4(0.3f, 0.3f, 0.3f, 1.00f);
+
+	ImVec4 midsat   = ImVec4(major.x * 0.75f, major.y * 0.75f, major.z * 0.75f, 1);
+	ImVec4 mid      = ImVec4(desat.x*0.75f, desat.y*0.75f, desat.z*0.75f, 1);
+	ImVec4 minor    = ImVec4(desat.x*0.5f,  desat.y*0.5f,  desat.z*0.5f,  1);
+	ImVec4 barely   = ImVec4(desat.x*0.3f,  desat.y*0.3f,  desat.z*0.3f,  1);
+	ImVec4 barelysat= ImVec4(major.x*0.3f,  major.y*0.3f,  major.z*0.3f,  1);
 	ImVec4 hover    = ImVec4(major.x*0.85f, major.y*0.85f, major.z*0.85f, 1);
 	ImVec4 action   = major;
 
 	colors[ImGuiCol_DockingPreview] = major;
-	colors[ImGuiCol_Header] = colors[ImGuiCol_FrameBg] = colors[ImGuiCol_TabUnfocused] = minor;
-	colors[ImGuiCol_Button]        = colors[ImGuiCol_ResizeGrip]        = colors[ImGuiCol_TabUnfocusedActive] = colors[ImGuiCol_Tab] = mid;
-	colors[ImGuiCol_ButtonActive ] = colors[ImGuiCol_ResizeGripActive]  = colors[ImGuiCol_HeaderActive]       = colors[ImGuiCol_TabActive]  = colors[ImGuiCol_FrameBgActive]  = action;
-	colors[ImGuiCol_ButtonHovered] = colors[ImGuiCol_ResizeGripHovered] = colors[ImGuiCol_HeaderHovered]      = colors[ImGuiCol_TabHovered] = colors[ImGuiCol_FrameBgHovered] = hover;
-	colors[ImGuiCol_TableRowBgAlt] = colors[ImGuiCol_TitleBgActive] = barely;
+	colors[ImGuiCol_Header]        = colors[ImGuiCol_FrameBg] = colors[ImGuiCol_TabUnfocused] = minor;
+	colors[ImGuiCol_Button]        = colors[ImGuiCol_ResizeGrip]        = colors[ImGuiCol_Tab] = mid;
+	colors[ImGuiCol_ButtonActive ] = colors[ImGuiCol_ResizeGripActive]  = colors[ImGuiCol_HeaderActive]  = colors[ImGuiCol_TabActive]  = colors[ImGuiCol_FrameBgActive]  = colors[ImGuiCol_CheckMark] = action;
+	colors[ImGuiCol_ButtonHovered] = colors[ImGuiCol_ResizeGripHovered] = colors[ImGuiCol_HeaderHovered] = colors[ImGuiCol_TabHovered] = colors[ImGuiCol_FrameBgHovered] = hover;
+	colors[ImGuiCol_TitleBg]       = colors[ImGuiCol_TitleBgActive]     = barelysat;
+	colors[ImGuiCol_TableRowBgAlt] = barely;
+	colors[ImGuiCol_TabUnfocusedActive] = colors[ImGuiCol_Separator] = midsat;
  
 	load_runtimes(runtime_config_path(), &runtimes, &runtime_count);
 
-	app_xr_settings.allow_session = true;
+	app_xr_settings.allow_session = false;
 	app_xr_settings.form          = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
 	openxr_info_reload(app_xr_settings);
 	
@@ -126,6 +139,8 @@ void app_window_runtime() {
 	ImGui::Separator();
 	ImGui::Spacing();
 
+	ImGui::Text(xr_runtime_name);
+
 	// Runtime picker
 	if (ImGui::BeginCombo("##Change Runtime", current_runtime == -1 ? "Change Runtime" : runtimes[current_runtime].name)) {
 		for (int n = 0; n < runtime_count; n++) {
@@ -141,10 +156,12 @@ void app_window_runtime() {
 		}
 		ImGui::EndCombo();
 	}
-	ImGui::SameLine();
+	
 	if (ImGui::Button("Reload runtime data")) {
 		openxr_info_reload(app_xr_settings);
 	}
+	ImGui::SameLine();
+	ImGui::Checkbox("Create XrSession", &app_xr_settings.allow_session);
 
 	ImGui::Spacing();
 	ImGui::Separator();
@@ -187,7 +204,6 @@ void app_window_runtime() {
 ///////////////////////////////////////////
 
 void app_window_openxr_functionality() {
-	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 	ImGui::Begin("Extensions & Layers");
 
 	for (size_t i = 0; i < xr_tables.count; i++) {
@@ -196,7 +212,6 @@ void app_window_openxr_functionality() {
 	}
 
 	ImGui::End();
-	ImGui::PopStyleVar();
 }
 
 ///////////////////////////////////////////
@@ -240,6 +255,9 @@ void app_window_view() {
 ///////////////////////////////////////////
 
 void app_element_table(const display_table_t *table) {
+	const float  text_col = 0.7f;
+	const ImVec4 text_vec = ImVec4{ text_col,text_col,text_col,1 };
+
 	if (ImGui::TreeNodeEx(table->show_type ? table->name_type : table->name_func, ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_AllowItemOverlap)) {
 		if (table->spec) {
 			ImGui::SameLine(ImGui::GetContentRegionMax().x - (ImGui::CalcTextSize("Open Spec").x + GImGui->Style.FramePadding.x * 3));
@@ -256,7 +274,10 @@ void app_element_table(const display_table_t *table) {
 			if (ImGui::BeginTable(table->name_type, 1, flags)) {
 				ImGui::TableNextRow();
 				ImGui::TableNextColumn();
+
+				ImGui::PushStyleColor(ImGuiCol_Text, text_vec);
 				ImGui::Text("%s", table->error);
+				ImGui::PopStyleColor();
 
 				ImGui::EndTable();
 			}
@@ -267,20 +288,26 @@ void app_element_table(const display_table_t *table) {
 				ImGui::TableHeadersRow();
 			}
 
+			ImGui::PushStyleColor(ImGuiCol_Text, text_vec);
+
 			for (size_t i = table->header_row?1:0; i < table->cols[0].count; i++) {
 				ImGui::TableNextRow();
 				for (size_t c = 0; c < table->column_count; c++) {
 					ImGui::TableNextColumn(); 
 					if (table->cols[c][i].spec) {
 						ImGui::PushID(i);
+						ImGui::PopStyleColor();
 						if (ImGui::Button("Spec"))
 							app_open_spec(table->cols[c][i].spec);
+						ImGui::PushStyleColor(ImGuiCol_Text, text_vec);
 						ImGui::PopID();
 					} else {
 						ImGui::Text("%s", table->cols[c][i].text);
 					}
 				}
 			}
+
+			ImGui::PopStyleColor();
 			ImGui::EndTable();
 		}
 

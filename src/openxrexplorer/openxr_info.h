@@ -54,6 +54,8 @@ struct xr_enum_info_t {
 	const char           *source_type_name;
 	const char           *spec_link;
 	const char           *error;
+	bool                  requires_instance;
+	bool                  requires_system;
 	bool                  requires_session;
 	display_tag_          tag;
 	array_t<const char *> items;
@@ -96,6 +98,8 @@ extern xr_view_info_t          xr_view;
 extern const char *xr_instance_err;
 extern const char *xr_session_err;
 extern const char *xr_system_err;
+
+extern const char* xr_runtime_name;
 
 /*** Signatures **************************/
 
