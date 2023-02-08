@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.7)
 
-project(openxrexplorer VERSION 1.0
-                       DESCRIPTION "A cross-platform OpenXR capabilities explorer and runtime switcher with a CLI and GUI. "
+project(openxrexplorer VERSION 1.5
+                       DESCRIPTION "A cross-platform OpenXR capabilities explorer and runtime switcher with a CLI and GUI."
                        LANGUAGES CXX)
 
 # Default build configuration to RelWithDebInfo 
@@ -21,10 +21,24 @@ if (UNIX)
   set(CPM_USE_LOCAL_PACKAGES ON) # Tell CPM to prefer locally installed packages
 endif()
 
+# For creating application installer
+set(CPACK_PACKAGE_NAME                 "openxr-explorer")
+set(CPACK_PACKAGE_VENDOR               "openxr-explorer")
+set(CPACK_PACKAGE_INSTALL_DIRECTORY    "openxr-explorer")
+set(CPACK_PACKAGE_INSTALL_REGISTRY_KEY "openxr-explorer")
+set(CPACK_PACKAGE_VERSION              ${PROJECT_VERSION})
+set(CPACK_PACKAGE_DESCRIPTION          ${PROJECT_DESCRIPTION})
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY  ${PROJECT_DESCRIPTION})
+set(CPACK_PACKAGE_HOMEPAGE_URL         "https://github.com/maluoi/openxr-explorer")
+set(CPACK_PACKAGE_EXECUTABLES          openxr-explorer;openxr-explorer)
+SET(CPACK_NSIS_INSTALLED_ICON_NAME     "bin/openxr-explorer.exe")
+SET(CPACK_NSIS_MODIFY_PATH             "ON")
+SET(CPACK_NSIS_IGNORE_LICENSE_PAGE     "ON")
+
+include(CPack)
 add_subdirectory(src)
 
-install(TARGETS openxr-explorer xrsetruntime
-        DESTINATION bin)
+install(TARGETS openxr-explorer xrsetruntime)
 
 # CLI commands for installation on Linux
 #
@@ -33,3 +47,6 @@ install(TARGETS openxr-explorer xrsetruntime
 #
 # Command to uninstall afterwards:
 #     sudo xargs rm < install_manifest.txt
+
+# You can also use this command to create an installer:
+#     cpack --config CPackConfig.cmake
