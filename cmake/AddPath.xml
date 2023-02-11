@@ -1,0 +1,11 @@
+<CPackWiXPatch>
+	<CPackWiXFragment Id="CM_CP_bin.openxr_explorer.exe">
+        <Environment Id="MyPath" 
+            Action="set"
+            Part="first"
+            Name="PATH" 
+            Value="[INSTALL_ROOT]bin"
+            System="yes"
+            Separator=";"/>
+	</CPackWiXFragment>
+</CPackWiXPatch>
