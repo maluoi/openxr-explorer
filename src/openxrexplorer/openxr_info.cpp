@@ -295,15 +295,15 @@ xr_extensions_t openxr_load_exts() {
 	}
 	xr_tables.add(table);
 
-	// Load and sort layers
+	// Load layers.
+	//
+	// Layers are not sorted because the order is important; for example, layers that
+	// use an extension should be before layers that provide the extension.
 	count = 0;
 	if (XR_FAILED(xrEnumerateApiLayerProperties(0, &count, nullptr)))
 		return result;
 	result.layers = array_t<XrApiLayerProperties>::make_fill(count, {XR_TYPE_API_LAYER_PROPERTIES});
 	xrEnumerateApiLayerProperties(count, &count, result.layers.data);
-	result.layers.sort([](const XrApiLayerProperties &a, const XrApiLayerProperties &b) {
-		return strcmp(a.layerName, b.layerName);
-	});
 
 	table = {};
 	table.name_func = "xrEnumerateApiLayerProperties";
