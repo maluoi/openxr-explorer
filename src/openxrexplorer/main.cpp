@@ -331,7 +331,7 @@ void app_element_table(const display_table_t *table) {
 #include <shellapi.h>
 void app_set_runtime(int32_t runtime_index) {
 	char command[1024];
-	snprintf(command, sizeof(command), " -%s", runtimes[runtime_index].name);
+	snprintf(command, sizeof(command), " \"-%s\"", runtimes[runtime_index].name);
 
 	SHELLEXECUTEINFO info = {0};
 	info.cbSize       = sizeof(SHELLEXECUTEINFO);
