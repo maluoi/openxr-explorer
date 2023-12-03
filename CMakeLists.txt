@@ -20,6 +20,7 @@ if (UNIX)
   # Android, static linking is necessary.
   set(CPM_USE_LOCAL_PACKAGES ON) # Tell CPM to prefer locally installed packages
 endif()
+include(cmake/json.cmake)
 
 add_subdirectory(src)
 
