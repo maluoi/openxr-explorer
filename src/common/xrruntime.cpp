@@ -257,7 +257,11 @@ char* read_file(const char* file) {
 		return nullptr;
 	}
 
-	// Get length of file
+	// Get (potentially an over-estimate of) the length of the file.
+	//
+	// The standard does not require that SEEK_END is supported, however it is
+	// on Linux and MacOS, but on Windows + the Microsoft CRT, this may give an
+	// over-estimate of the file size.
 	fseek(fp, 0, SEEK_END);
 	size_t size = ftell(fp);
 	fseek(fp, 0, SEEK_SET);
@@ -266,12 +270,18 @@ char* read_file(const char* file) {
 	char* file_data = (char*)malloc(size+1);
 	char* it = file_data;
 	size_t bytes_to_read = size;
+	// Because the size might be an over-estimate, we consider things done when
+	// `fread()` returns zero bytes, not when we reach the expected size.
 	while (size_t bytes_read = fread(it, 1, bytes_to_read, fp)) {
 		bytes_to_read -= bytes_read;
 		it += bytes_read;
 	}
 	// Stick an end string 0 character at the end in case the caller wants
-	// to treat it like a string
+	// to treat it like a string.
+	//
+	// We're using the iterator instead of `file_data[size]` here to make sure
+	// we're putting it at the actual end of the file, which might be smaller
+	// than the size we got above.
 	*it = '\0';
 	fclose(fp);
 	return file_data;
