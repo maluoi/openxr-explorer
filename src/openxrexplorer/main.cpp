@@ -139,7 +139,7 @@ void app_window_runtime() {
 	ImGui::Separator();
 	ImGui::Spacing();
 
-	ImGui::Text(xr_runtime_name);
+	ImGui::Text("%s", xr_runtime_name);
 
 	// Runtime picker
 	if (ImGui::BeginCombo("##Change Runtime", current_runtime == -1 ? "Change Runtime" : runtimes[current_runtime].name)) {
