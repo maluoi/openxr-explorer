@@ -11,6 +11,18 @@ if (NOT EXISTS ${CMAKE_BINARY_DIR}/CMakeCache.txt)
     endif()
 endif()
 
+# CMake 3.14 introduced CMP0083 - Control generation of Position Independent Executable (PIE)
+if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.14.0")
+	cmake_policy(SET CMP0083 NEW)
+	include(CheckPIESupported)
+	check_pie_supported()
+endif()
+
+# Default to PIC code
+include(CheckPIESupported)
+check_pie_supported()
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 # See: https://github.com/cpm-cmake/CPM.cmake
 include("cmake/CPM.cmake")
 if (UNIX)
