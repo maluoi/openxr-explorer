@@ -1,7 +1,7 @@
-#include "imgui/imgui_skg.h"
+#include "app_imgui.h"
+#include "app_cli.h"
 #include "xrruntime.h"
 #include "openxr_info.h"
-#include "app_cli.h"
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -44,14 +44,15 @@ bool app_args(int32_t arg_count, const char **args) {
 bool app_init() {
 	ImGuiStyle* style = &ImGui::GetStyle();
 	ImVec4* colors = style->Colors;
-	style->FrameRounding = 2;
+	style->FrameRounding = 4;
 	style->FramePadding  = ImVec2{ 6, 4 };
 	style->WindowPadding = ImVec2{ 10, 10 };
-	style->ScrollbarRounding = 1;
-	style->AntiAliasedFill        = false;
-	style->AntiAliasedLines       = false;
+	style->ScrollbarRounding = 2;
+	style->AntiAliasedFill        = true;
+	style->AntiAliasedLines       = true;
 	style->AntiAliasedLinesUseTex = false;
 
+	style->ScaleAllSizes(app_scale);
 
 	ImVec4 major    = ImVec4(0.471f, 0.169f, 0.565f, 1.00f);
 	ImVec4 desat    = ImVec4(0.3f, 0.3f, 0.3f, 1.00f);
@@ -91,7 +92,7 @@ void app_shutdown() {
 ///////////////////////////////////////////
 
 void app_step(ImVec2 canvas_size) {
-	ImGuiID dockspace_id = ImGui::DockSpaceOverViewport(nullptr, ImGuiDockNodeFlags_PassthruCentralNode);
+	ImGuiID dockspace_id = ImGui::DockSpaceOverViewport(0, NULL, ImGuiDockNodeFlags_PassthruCentralNode, NULL);
 	if (!ImGui::DockBuilderGetNode(dockspace_id)->IsSplitNode()) {
 		ImGuiID dock_id_left;
 		ImGuiID dock_id_mid;
@@ -258,6 +259,7 @@ void app_element_table(const display_table_t *table) {
 	const float  text_col = 0.7f;
 	const ImVec4 text_vec = ImVec4{ text_col,text_col,text_col,1 };
 
+	ImGui::PushID(table->show_type ? table->name_type : table->name_func);
 	if (ImGui::TreeNodeEx(table->show_type ? table->name_type : table->name_func, ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_AllowItemOverlap)) {
 		if (table->spec) {
 			ImGui::SameLine(ImGui::GetContentRegionMax().x - (ImGui::CalcTextSize("Open Spec").x + GImGui->Style.FramePadding.x * 3));
@@ -290,6 +292,7 @@ void app_element_table(const display_table_t *table) {
 
 			ImGui::PushStyleColor(ImGuiCol_Text, text_vec);
 
+			ImGui::PushID("Table Rows");
 			for (size_t i = table->header_row?1:0; i < table->cols[0].count; i++) {
 				ImGui::TableNextRow();
 				for (size_t c = 0; c < table->column_count; c++) {
@@ -306,6 +309,7 @@ void app_element_table(const display_table_t *table) {
 					}
 				}
 			}
+			ImGui::PopID();
 
 			ImGui::PopStyleColor();
 			ImGui::EndTable();
@@ -320,6 +324,7 @@ void app_element_table(const display_table_t *table) {
 			app_open_spec(table->spec);
 		}
 	}
+	ImGui::PopID();
 }
 
 ///////////////////////////////////////////

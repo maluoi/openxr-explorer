@@ -268,8 +268,39 @@ void openxr_init_session() {
 xr_extensions_t openxr_load_exts() {
 	xr_extensions_t result = {};
 
-	// Load and sort extensions
+	// Load layers.
+	//
+	// Layers are not sorted because the order is important; for example, layers that
+	// use an extension should be before layers that provide the extension.
 	uint32_t count = 0;
+	if (XR_FAILED(xrEnumerateApiLayerProperties(0, &count, nullptr)))
+		return result;
+	result.layers = array_t<XrApiLayerProperties>::make_fill(count, {XR_TYPE_API_LAYER_PROPERTIES});
+	xrEnumerateApiLayerProperties(count, &count, result.layers.data);
+
+	display_table_t table = {};
+	table.name_func = "xrEnumerateApiLayerProperties";
+	table.name_type = "XrApiLayerProperties";
+	table.spec      = "api-layers";
+	table.tag       = display_tag_features;
+	table.column_count = 3;
+	table.header_row   = true;
+	if (result.layers.count > 0) {
+		table.cols[0].add({ "Layer Name" });
+		table.cols[1].add({ "Description" });
+		table.cols[2].add({ "Version", "Version" });
+		for (size_t i = 0; i < result.layers.count; i++) {
+			table.cols[0].add({result.layers[i].layerName});
+			table.cols[1].add({result.layers[i].description});
+			table.cols[2].add({new_string("v%u",result.layers[i].layerVersion)});
+		}
+	} else {
+		table.error = "No layers present";
+	}
+	xr_tables.add(table);
+
+	// Load and sort extensions
+	count = 0;
 	if (XR_FAILED(xrEnumerateInstanceExtensionProperties(nullptr, 0, &count, nullptr)))
 		return result;
 	result.extensions = array_t<XrExtensionProperties>::make_fill(count, {XR_TYPE_EXTENSION_PROPERTIES});
@@ -278,7 +309,7 @@ xr_extensions_t openxr_load_exts() {
 		return strcmp(a.extensionName, b.extensionName);
 	});
 
-	display_table_t table = {};
+	table = {};
 	table.name_func = "xrEnumerateInstanceExtensionProperties";
 	table.name_type = "XrExtensionProperties";
 	table.spec      = "extensions";
@@ -292,33 +323,6 @@ xr_extensions_t openxr_load_exts() {
 		table.cols[0].add({result.extensions[i].extensionName});
 		table.cols[1].add({new_string("v%u",result.extensions[i].extensionVersion)});
 		table.cols[2].add({nullptr, result.extensions[i].extensionName});
-	}
-	xr_tables.add(table);
-
-	// Load layers.
-	//
-	// Layers are not sorted because the order is important; for example, layers that
-	// use an extension should be before layers that provide the extension.
-	count = 0;
-	if (XR_FAILED(xrEnumerateApiLayerProperties(0, &count, nullptr)))
-		return result;
-	result.layers = array_t<XrApiLayerProperties>::make_fill(count, {XR_TYPE_API_LAYER_PROPERTIES});
-	xrEnumerateApiLayerProperties(count, &count, result.layers.data);
-
-	table = {};
-	table.name_func = "xrEnumerateApiLayerProperties";
-	table.name_type = "XrApiLayerProperties";
-	table.spec      = "api-layers";
-	table.tag       = display_tag_features;
-	table.column_count = 3;
-	table.header_row   = true;
-	table.cols[0].add({ "Layer Name" });
-	table.cols[1].add({ "Description" });
-	table.cols[2].add({ "Version", "Version" });
-	for (size_t i = 0; i < result.layers.count; i++) {
-		table.cols[0].add({result.layers[i].layerName});
-		table.cols[1].add({result.layers[i].description});
-		table.cols[2].add({new_string("v%u",result.layers[i].layerVersion)});
 	}
 	xr_tables.add(table);
 

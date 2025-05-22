@@ -1,15 +1,18 @@
-#include "imgui_skg.h"
-#include "imgui_impl_skg.h"
+#include "app_imgui.h"
+#include "imgui/imgui_impl_skg.h"
 
 #if defined(_WIN32)
-#include "../resource.h"
-#include "imgui_impl_win32.h"
+#include "resource.h"
+#include "imgui/imgui_impl_win32.h"
 #include <windows.h>
+
+#include <ShellScalingAPI.h>
+#pragma comment(lib, "Shcore.lib")
 
 #elif defined(__linux__)
 // libxcb-keysyms1-dev, libxcb1-dev, libxcb-xfixes0-dev libxcb-cursor-dev libxcb-xkb-dev
 // libxcb, libxcb-xfixes, libxcb-xkb1 libxcb-cursor0, libxcb-keysyms1 and libxcb-randr0
-#include "imgui_impl_x11.h"
+#include "imgui/imgui_impl_x11.h"
 
 #include<X11/X.h>
 #include<X11/Xlib.h>
@@ -21,11 +24,12 @@
 
 #include <stdio.h>
 
-#include "sk_gpu.h"
+#include "imgui/sk_gpu.h"
 #define SOKOL_TIME_IMPL
-#include "sokol_time.h"
+#include "imgui/sokol_time.h"
 
 const char     *app_path_config = "";
+float           app_scale       = 1.0f;
 skg_swapchain_t sk_swapchain = {};
 int32_t         sk_width     = 1280;
 int32_t         sk_height    = 800;
@@ -43,12 +47,6 @@ int main(int arg_count, const char **args) {
 
 	shell_create_window();
 
-	// Setup Dear ImGui context
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO(); (void)io;
-	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable | ImGuiConfigFlags_DpiEnableScaleFonts;
-
 	// Setup Dear ImGui style
 	ImGui::StyleColorsDark();
 
@@ -60,6 +58,7 @@ int main(int arg_count, const char **args) {
 	shell_loop([]() {
 		// Start the Dear ImGui frame
 		skg_draw_begin();
+		ImGui_ImplSkg_NewFrame();
 		ImGui::NewFrame();
 
 		app_step({(float)sk_width, (float)sk_height});
@@ -116,9 +115,24 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 bool shell_create_window() {
 	FreeConsole();
 
+	SetProcessDPIAware();
+	SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+
 	WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(NULL), NULL, NULL, NULL, NULL, "ImGui sk_gpu shell", NULL };
 	RegisterClassEx(&wc);
 	shell_hwnd = CreateWindow(wc.lpszClassName, app_name, WS_OVERLAPPEDWINDOW, 100, 100, sk_width, sk_height, NULL, NULL, wc.hInstance, NULL);
+	
+	// Get the DPI
+	HMONITOR monitor = MonitorFromWindow(shell_hwnd, MONITOR_DEFAULTTONEAREST);
+	UINT dpiX, dpiY;
+	if (GetDpiForMonitor(monitor, MDT_EFFECTIVE_DPI, &dpiX, &dpiY) == S_OK) {
+		app_scale = dpiX / 96.0f;
+	} else {
+		// Fallback for older Windows versions
+		HDC hdc   = GetDC(shell_hwnd);
+		app_scale = GetDeviceCaps(hdc, LOGPIXELSX) / 96.0f;
+		ReleaseDC(shell_hwnd, hdc);
+	}
 
 	HANDLE icon = LoadIcon(wc.hInstance, MAKEINTRESOURCE(IDI_ICON1));
 	if (icon) {
@@ -146,6 +160,11 @@ bool shell_create_window() {
 
 	// Setup Platform/Renderer backends
 	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO();
+	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+	ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\consola.ttf", 14.0f * app_scale, NULL, io.Fonts->GetGlyphRangesDefault());
+	io.FontGlobalScale = 1.0f;
+
 	ImGui_ImplWin32_Init(shell_hwnd);
 	ImGui_ImplSkg_Init();
 
@@ -385,6 +404,7 @@ void shell_loop(void (*step)()) {
 
 		// Start the Dear ImGui frame
 		ImGui_ImplX11_NewFrame();
+		ImGui_ImplSkg_NewFrame();
 
 		step();
 
