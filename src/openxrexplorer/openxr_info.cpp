@@ -776,23 +776,23 @@ void openxr_register_enums() {
 		for (size_t i = 0; i < formats.count; i++) {
 			skg_tex_fmt_ format = skg_tex_fmt_from_native(formats[i]);
 			switch (format) {
-			case skg_tex_fmt_none:          ref_info->items.add("skg_tex_fmt_unrecognized");    break;
-			case skg_tex_fmt_rgba32:        ref_info->items.add("skg_tex_fmt_rgba32");          break;
-			case skg_tex_fmt_rgba32_linear: ref_info->items.add("skg_tex_fmt_rgba32_linear");   break;
-			case skg_tex_fmt_bgra32:        ref_info->items.add("skg_tex_fmt_bgra32");          break;
-			case skg_tex_fmt_bgra32_linear: ref_info->items.add("skg_tex_fmt_bgra32_linear");   break;
-			case skg_tex_fmt_rg11b10:       ref_info->items.add("skg_tex_fmt_rg11b10");         break;
-			case skg_tex_fmt_rgb10a2:       ref_info->items.add("skg_tex_fmt_rgb10a2");         break;
-			case skg_tex_fmt_rgba64u:       ref_info->items.add("skg_tex_fmt_rgba64u");         break;
-			case skg_tex_fmt_rgba64s:       ref_info->items.add("skg_tex_fmt_rgba64s");         break;
-			case skg_tex_fmt_rgba64f:       ref_info->items.add("skg_tex_fmt_rgba64f");         break;
-			case skg_tex_fmt_rgba128:       ref_info->items.add("skg_tex_fmt_rgba128");         break;
-			case skg_tex_fmt_r8:            ref_info->items.add("skg_tex_fmt_r8");              break;
-			case skg_tex_fmt_r16:           ref_info->items.add("skg_tex_fmt_r16");             break;
-			case skg_tex_fmt_r32:           ref_info->items.add("skg_tex_fmt_r32");             break;
-			case skg_tex_fmt_depthstencil:  ref_info->items.add("skg_tex_fmt_depth24stencil8"); break;
-			case skg_tex_fmt_depth32:       ref_info->items.add("skg_tex_fmt_depth32");         break;
-			case skg_tex_fmt_depth16:       ref_info->items.add("skg_tex_fmt_depth16");         break;
+			case skg_tex_fmt_none:          ref_info->items.add(new_string("Unknown 0x%x #%d", formats[i], formats[i])); break;
+			case skg_tex_fmt_rgba32:        ref_info->items.add("rgba32");          break;
+			case skg_tex_fmt_rgba32_linear: ref_info->items.add("rgba32 linear");   break;
+			case skg_tex_fmt_bgra32:        ref_info->items.add("bgra32");          break;
+			case skg_tex_fmt_bgra32_linear: ref_info->items.add("bgra32 linear");   break;
+			case skg_tex_fmt_rg11b10:       ref_info->items.add("rg11 b10");        break;
+			case skg_tex_fmt_rgb10a2:       ref_info->items.add("rgb10 a2");        break;
+			case skg_tex_fmt_rgba64u:       ref_info->items.add("rgba64u");         break;
+			case skg_tex_fmt_rgba64s:       ref_info->items.add("rgba64s");         break;
+			case skg_tex_fmt_rgba64f:       ref_info->items.add("rgba64f");         break;
+			case skg_tex_fmt_rgba128:       ref_info->items.add("rgba128");         break;
+			case skg_tex_fmt_r8:            ref_info->items.add("r8");              break;
+			case skg_tex_fmt_r16:           ref_info->items.add("r16");             break;
+			case skg_tex_fmt_r32:           ref_info->items.add("r32");             break;
+			case skg_tex_fmt_depthstencil:  ref_info->items.add("depth24 stencil8");break;
+			case skg_tex_fmt_depth32:       ref_info->items.add("depth32");         break;
+			case skg_tex_fmt_depth16:       ref_info->items.add("depth16");         break;
 			}
 		}
 		formats.free();

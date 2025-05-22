@@ -143,6 +143,7 @@ void app_window_runtime() {
 	ImGui::Text("%s", xr_runtime_name);
 
 	// Runtime picker
+	ImGui::PushItemWidth(-1);
 	if (ImGui::BeginCombo("##Change Runtime", current_runtime == -1 ? "Change Runtime" : runtimes[current_runtime].name)) {
 		for (int n = 0; n < runtime_count; n++) {
 			if (!runtimes[n].present) continue;
@@ -169,6 +170,7 @@ void app_window_runtime() {
 	ImGui::Spacing();
 
 	// Runtime list
+	ImGui::AlignTextToFramePadding();
 	ImGui::Text("Runtime not here?");
 	ImGui::SameLine();
 	if (ImGui::Button("Edit runtime list")) {
@@ -260,7 +262,13 @@ void app_element_table(const display_table_t *table) {
 	const ImVec4 text_vec = ImVec4{ text_col,text_col,text_col,1 };
 
 	ImGui::PushID(table->show_type ? table->name_type : table->name_func);
-	if (ImGui::TreeNodeEx(table->show_type ? table->name_type : table->name_func, ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_AllowItemOverlap)) {
+
+	ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_AllowItemOverlap;
+	if (table->error == NULL) flags |= ImGuiTreeNodeFlags_DefaultOpen;
+
+	ImGui::PushStyleColor(ImGuiCol_Text, table->error == NULL ? IM_COL32(255, 255, 255, 255) : IM_COL32(155, 155, 155, 255));
+	if (ImGui::TreeNodeEx(table->show_type ? table->name_type : table->name_func, flags)) {
+		ImGui::PopStyleColor();
 		if (table->spec) {
 			ImGui::SameLine(ImGui::GetContentRegionMax().x - (ImGui::CalcTextSize("Open Spec").x + GImGui->Style.FramePadding.x * 3));
 			if (ImGui::Button("Open Spec")) {
@@ -319,10 +327,13 @@ void app_element_table(const display_table_t *table) {
 
 		ImGui::TreePop();
 	} else if (table->spec) {
+		ImGui::PopStyleColor();
 		ImGui::SameLine(ImGui::GetContentRegionMax().x - (ImGui::CalcTextSize("Open Spec").x + GImGui->Style.FramePadding.x * 3));
 		if (ImGui::Button("Open Spec")) {
 			app_open_spec(table->spec);
 		}
+	} else {
+		ImGui::PopStyleColor();
 	}
 	ImGui::PopID();
 }
