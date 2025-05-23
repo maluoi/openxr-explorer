@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.7)
 
-project(openxrexplorer VERSION 1.5
+project(openxrexplorer VERSION 1.6
                        DESCRIPTION "A cross-platform OpenXR capabilities explorer and runtime switcher with a CLI and GUI. "
                        LANGUAGES CXX)
 
