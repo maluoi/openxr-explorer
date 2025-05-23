@@ -320,8 +320,10 @@ bool shell_create_window() {
 
 	// Set the .ini file
 	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO();
 	snprintf(app_ini_path_str, sizeof(app_ini_path_str), "%s/imgui.ini", app_config_path_str);
-	ImGui::GetIO().IniFilename = app_ini_path_str;
+	io.IniFilename = app_ini_path_str;
+	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 	// Setup Platform/Renderer backends
 	ImGui_ImplX11_Init(xcb_window);
 	ImGui_ImplSkg_Init();
