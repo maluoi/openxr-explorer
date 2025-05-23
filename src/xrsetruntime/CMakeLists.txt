@@ -1,4 +1,4 @@
-project(xrsetruntime VERSION 1.0
+project(xrsetruntime VERSION 1.5
                      DESCRIPTION "Sets the OpenXR runtime"
                      LANGUAGES CXX)
 

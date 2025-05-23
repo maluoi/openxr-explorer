@@ -692,13 +692,3 @@ void openxr_load_system_properties(XrInstance xr_instance, XrSystemId xr_system_
 
 // <<GENERATED_CODE_END>>
 }
-
-
-
-
-
-
-
-
-
-
