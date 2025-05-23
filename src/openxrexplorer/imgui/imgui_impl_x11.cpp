@@ -271,7 +271,7 @@ bool    ImGui_ImplX11_Init(xcb_window_t window)
     // There are some unusual key symbols in the 0xFE00 and 0xFD00 range.
     // If you really want to support those check for that in your own xcb event handler.
     // FIXME: Similar issue as OSX binding.
-    io.KeyMap[ImGuiKey_Tab] = XK_Tab - 0xFF00;
+    /*io.KeyMap[ImGuiKey_Tab] = XK_Tab - 0xFF00;
     io.KeyMap[ImGuiKey_LeftArrow] = XK_Left - 0xFF00;
     io.KeyMap[ImGuiKey_RightArrow] = XK_Right - 0xFF00;
     io.KeyMap[ImGuiKey_UpArrow] = XK_Up - 0xFF00;
@@ -292,13 +292,41 @@ bool    ImGui_ImplX11_Init(xcb_window_t window)
     io.KeyMap[ImGuiKey_V] = XK_v;
     io.KeyMap[ImGuiKey_X] = XK_x;
     io.KeyMap[ImGuiKey_Y] = XK_y;
-    io.KeyMap[ImGuiKey_Z] = XK_z;
+    io.KeyMap[ImGuiKey_Z] = XK_z;*/
 
     g_HideXCursor = io.MouseDrawCursor;
 
     ImGui_ImplX11_InitPlatformInterface();
 
     return true;
+}
+
+ImGuiKey TranslateKey(int k) {
+    switch (k) {
+        case XK_Tab: return ImGuiKey_Tab;
+        case XK_Left: return ImGuiKey_LeftArrow;
+        case XK_Right: return ImGuiKey_RightArrow;
+        case XK_Up: return ImGuiKey_UpArrow;
+        case XK_Down: return ImGuiKey_DownArrow;
+        case XK_Page_Up: return ImGuiKey_PageUp;
+        case XK_Page_Down: return ImGuiKey_PageDown;
+        case XK_Home: return ImGuiKey_Home;
+        case XK_End: return ImGuiKey_End;
+        case XK_Insert: return ImGuiKey_Insert;
+        case XK_Delete: return ImGuiKey_Delete;
+        case XK_BackSpace: return ImGuiKey_Backspace;
+        case XK_Return: return ImGuiKey_Enter;
+        case XK_Escape: return ImGuiKey_Escape;
+        case XK_KP_Enter: return ImGuiKey_KeypadEnter;
+        case XK_space: return ImGuiKey_Space;
+        case XK_a: return ImGuiKey_A;
+        case XK_c: return ImGuiKey_C;
+        case XK_v: return ImGuiKey_V;
+        case XK_x: return ImGuiKey_X;
+        case XK_y: return ImGuiKey_Y;
+        case XK_z: return ImGuiKey_Z;
+        default: return ImGuiKey_None;
+    }
 }
 
 void    ImGui_ImplX11_Shutdown()
@@ -397,7 +425,7 @@ bool ImGui_ImplX11_ProcessEvent(xcb_generic_event_t* event)
 
         if (k < 0xFF) // latin-1 range
         {
-            io.KeysDown[k] = 1;
+            io.AddKeyEvent(TranslateKey(k), 1);
             io.AddInputCharacter(k);
         }
         else if (k >= XK_Shift_L && k <= XK_Hyper_R) // modifier keys
@@ -426,8 +454,9 @@ bool ImGui_ImplX11_ProcessEvent(xcb_generic_event_t* event)
         }
         else if (k >= 0x1000100 && k <= 0x110ffff) // utf range
             io.AddInputCharacterUTF16(k);
-        else
-            io.KeysDown[k - 0xFF00] = 1;
+        else {
+            io.AddKeyEvent(TranslateKey(k), 1);
+        }
 
         return true;
     }
@@ -436,8 +465,9 @@ bool ImGui_ImplX11_ProcessEvent(xcb_generic_event_t* event)
         xcb_key_press_event_t* e = (xcb_key_press_event_t*)event;
         xcb_keysym_t k = xcb_key_press_lookup_keysym(g_KeySyms, e, 0);
 
-        if (k < 0xff)
-            io.KeysDown[k] = 0;
+        if (k < 0xff) {
+            io.AddKeyEvent(TranslateKey(k), 0);
+        }
         else if (k >= XK_Shift_L && k <= XK_Hyper_R) // modifier keys
         {
             switch(k)
@@ -462,8 +492,9 @@ bool ImGui_ImplX11_ProcessEvent(xcb_generic_event_t* event)
                 break;
             }
         }
-        else
-            io.KeysDown[k - 0xFF00] = 0;
+        else {
+            io.AddKeyEvent(TranslateKey(k), 0);
+        }
 
         return true;
     }

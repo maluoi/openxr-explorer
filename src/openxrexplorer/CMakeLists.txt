@@ -15,6 +15,10 @@ CPMAddPackage(
 if (UNIX)
     find_package(X11 REQUIRED)
     find_package(GLEW REQUIRED)
+    set(PLATFORM_FILES
+        imgui/imgui_impl_x11.h
+        imgui/imgui_impl_x11.cpp
+    )
 endif(UNIX)
 
 if (WIN32)
@@ -22,6 +26,8 @@ if (WIN32)
     set(PLATFORM_FILES
         resource.h
         resource.rc
+        imgui/imgui_impl_win32.h
+        imgui/imgui_impl_win32.cpp
     )
 endif(WIN32)
 
@@ -43,10 +49,6 @@ add_executable(openxr-explorer
     imgui/imgui_draw.cpp
     imgui/imgui_impl_skg.h
     imgui/imgui_impl_skg.cpp
-    imgui/imgui_impl_win32.h
-    imgui/imgui_impl_win32.cpp
-    imgui/imgui_impl_x11.h
-    imgui/imgui_impl_x11.cpp
     imgui/imgui_internal.h
     imgui/imgui_shader.hlsl.h
     imgui/imgui_tables.cpp
