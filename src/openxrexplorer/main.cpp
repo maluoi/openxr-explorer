@@ -1,5 +1,6 @@
 #include "app_imgui.h"
 #include "app_cli.h"
+#include "imgui/imgui_internal.h"
 #include "xrruntime.h"
 #include "openxr_info.h"
 
@@ -22,6 +23,7 @@ int32_t    runtime_count = 0;
 void app_window_openxr_functionality();
 void app_window_runtime();
 void app_window_view();
+void app_window_misc();
 void app_element_table(const display_table_t *table);
 
 void app_set_runtime   (int32_t runtime_index);
@@ -112,16 +114,8 @@ void app_step(ImVec2 canvas_size) {
 	app_window_openxr_functionality();
 	app_window_runtime();
 	app_window_view();
+	app_window_misc();
 	//ImGui::ShowDemoWindow();
-
-	ImGui::Begin("Misc Enumerations");
-
-	for (size_t i = 0; i < xr_tables.count; i++) {
-		if (xr_tables[i].tag == display_tag_misc)
-			app_element_table(&xr_tables[i]);
-	}
-
-	ImGui::End();
 }
 
 ///////////////////////////////////////////
@@ -252,6 +246,19 @@ void app_window_view() {
 		if (xr_tables[i].tag == display_tag_view)
 			app_element_table(&xr_tables[i]);
 	}
+	ImGui::End();
+}
+
+///////////////////////////////////////////
+
+void app_window_misc() {
+	ImGui::Begin("Misc Enumerations");
+
+	for (size_t i = 0; i < xr_tables.count; i++) {
+		if (xr_tables[i].tag == display_tag_misc)
+			app_element_table(&xr_tables[i]);
+	}
+
 	ImGui::End();
 }
 

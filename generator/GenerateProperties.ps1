@@ -25,6 +25,9 @@ foreach ($struct in $systemPropertiesStructs) {
 	}
 }
 
+# Sort structs by name before generating content
+$systemPropertiesStructs = $systemPropertiesStructs | Sort-Object name
+
 # Step 3: Generate the content
 $generatedContent = @()
 $idx = 0;

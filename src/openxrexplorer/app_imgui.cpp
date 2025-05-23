@@ -85,6 +85,34 @@ int main(int arg_count, const char **args) {
 
 HWND shell_hwnd;
 
+void win32_save_settings(HWND hwnd) {
+	RECT rect = { };
+	if (GetWindowRect(hwnd, &rect)) {
+		HKEY hKey;
+		if (RegCreateKeyExA(HKEY_CURRENT_USER, "Software\\OpenXR Explorer", 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hKey, NULL) == ERROR_SUCCESS) {
+			RegSetValueExA(hKey, "Window", 0, REG_BINARY, (BYTE*)&rect, sizeof(rect));
+			RegCloseKey(hKey);
+		}
+	}
+}
+
+void win32_restore_settings(HWND hwnd) {
+	HKEY hKey;
+	if (RegOpenKeyExA(HKEY_CURRENT_USER, "Software\\OpenXR Explorer", 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
+		RECT  rect      = { };
+		DWORD rect_type = REG_BINARY;
+		DWORD rect_size = sizeof(rect);
+		if (RegQueryValueExA(hKey, "Window", NULL, &rect_type, (BYTE*)&rect, &rect_size) == ERROR_SUCCESS) {
+			SetWindowPos(hwnd, NULL,
+				rect.left, rect.top,
+				rect.right  - rect.left,
+				rect.bottom - rect.top,
+				SWP_NOZORDER);
+		}
+		RegCloseKey(hKey);
+	}
+}
+
 // Forward declare message handler from imgui_impl_win32.cpp
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -106,6 +134,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			return 0;
 		break;
 	case WM_DESTROY:
+		win32_save_settings(hWnd);
 		PostQuitMessage(0);
 		return 0;
 	}
@@ -118,22 +147,22 @@ bool shell_create_window() {
 	SetProcessDPIAware();
 	SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
 
-	WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(NULL), NULL, NULL, NULL, NULL, "ImGui sk_gpu shell", NULL };
-	RegisterClassEx(&wc);
-	shell_hwnd = CreateWindow(wc.lpszClassName, app_name, WS_OVERLAPPEDWINDOW, 100, 100, sk_width, sk_height, NULL, NULL, wc.hInstance, NULL);
-	
 	// Get the DPI
-	HMONITOR monitor = MonitorFromWindow(shell_hwnd, MONITOR_DEFAULTTONEAREST);
+	HMONITOR monitor = MonitorFromPoint({100,100}, MONITOR_DEFAULTTOPRIMARY);
 	UINT dpiX, dpiY;
 	if (GetDpiForMonitor(monitor, MDT_EFFECTIVE_DPI, &dpiX, &dpiY) == S_OK) {
 		app_scale = dpiX / 96.0f;
 	} else {
 		// Fallback for older Windows versions
-		HDC hdc   = GetDC(shell_hwnd);
+		HDC hdc   = GetDC(NULL);
 		app_scale = GetDeviceCaps(hdc, LOGPIXELSX) / 96.0f;
-		ReleaseDC(shell_hwnd, hdc);
+		ReleaseDC(NULL, hdc);
 	}
 
+	WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(NULL), NULL, NULL, NULL, NULL, "ImGui sk_gpu shell", NULL };
+	RegisterClassEx(&wc);
+	shell_hwnd = CreateWindow(wc.lpszClassName, app_name, WS_OVERLAPPEDWINDOW, 100, 100, (int)(sk_width*app_scale), (int)(sk_height*app_scale), NULL, NULL, wc.hInstance, NULL);
+	
 	HANDLE icon = LoadIcon(wc.hInstance, MAKEINTRESOURCE(IDI_ICON1));
 	if (icon) {
 		SendMessage(shell_hwnd, WM_SETICON, ICON_SMALL, (LPARAM)icon);
@@ -158,11 +187,13 @@ bool shell_create_window() {
 	ShowWindow  (shell_hwnd, SW_SHOWDEFAULT);
 	UpdateWindow(shell_hwnd);
 
+	win32_restore_settings(shell_hwnd);
+
 	// Setup Platform/Renderer backends
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO();
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-	ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\consola.ttf", 14.0f * app_scale, NULL, io.Fonts->GetGlyphRangesDefault());
+	ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\consola.ttf", 12.0f * app_scale, NULL, io.Fonts->GetGlyphRangesDefault());
 	io.FontGlobalScale = 1.0f;
 
 	ImGui_ImplWin32_Init(shell_hwnd);

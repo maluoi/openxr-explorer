@@ -2,12 +2,12 @@ name: CMake
 
 on:
   push:
-    branches: [ "main" ]
+    tags:
+      - v**
   pull_request:
     branches: [ "main" ]
 
 env:
-  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
   BUILD_TYPE: Release
 
 jobs:
@@ -47,3 +47,22 @@ jobs:
       with:
         name: ${{ matrix.os }}
         path: "*.zip"
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        draft: true
+        files: |
+          artifacts/windows-latest/*.zip
+          artifacts/ubuntu-latest/*.zip
