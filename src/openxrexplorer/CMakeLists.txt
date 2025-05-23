@@ -1,4 +1,4 @@
-project(openxr-explorer VERSION 1.0
+project(openxr-explorer VERSION 1.5
                         DESCRIPTION "A cross-platform OpenXR capabilities explorer and runtime switcher with a CLI and GUI."
                         LANGUAGES CXX)
 
@@ -7,14 +7,18 @@ set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 #### OpenXR - https://www.khronos.org/openxr/ ####
 CPMAddPackage(
   NAME OpenXR
-  VERSION 1.0.25
+  VERSION 1.1.47
   GITHUB_REPOSITORY KhronosGroup/OpenXR-SDK
-  GIT_TAG c16a18c99740ea5dd251e3af117e0e5aea4ceaa9 # v1.0.25
+  GIT_TAG 858912260ca616f4c23f7fb61c89228c353eb124 # v1.1.47
 )
 
 if (UNIX)
     find_package(X11 REQUIRED)
     find_package(GLEW REQUIRED)
+    set(PLATFORM_FILES
+        imgui/imgui_impl_x11.h
+        imgui/imgui_impl_x11.cpp
+    )
 endif(UNIX)
 
 if (WIN32)
@@ -22,6 +26,8 @@ if (WIN32)
     set(PLATFORM_FILES
         resource.h
         resource.rc
+        imgui/imgui_impl_win32.h
+        imgui/imgui_impl_win32.cpp
     )
 endif(WIN32)
 
@@ -29,8 +35,12 @@ add_executable(openxr-explorer
     main.cpp
     openxr_info.h
     openxr_info.cpp
+    openxr_properties.h
+    openxr_properties.cpp
     app_cli.h
     app_cli.cpp
+    app_imgui.h
+    app_imgui.cpp
     array.h
     imgui/imconfig.h
     imgui/imgui.h
@@ -39,14 +49,8 @@ add_executable(openxr-explorer
     imgui/imgui_draw.cpp
     imgui/imgui_impl_skg.h
     imgui/imgui_impl_skg.cpp
-    imgui/imgui_impl_win32.h
-    imgui/imgui_impl_win32.cpp
-    imgui/imgui_impl_x11.h
-    imgui/imgui_impl_x11.cpp
     imgui/imgui_internal.h
     imgui/imgui_shader.hlsl.h
-    imgui/imgui_skg.h
-    imgui/imgui_skg.cpp
     imgui/imgui_tables.cpp
     imgui/imgui_widgets.cpp
     imgui/imstb_rectpack.h

@@ -1,4 +1,5 @@
 #include "openxr_info.h"
+#include "openxr_properties.h"
 
 #if defined(__linux__)
 #include <GL/glxew.h>
@@ -268,8 +269,39 @@ void openxr_init_session() {
 xr_extensions_t openxr_load_exts() {
 	xr_extensions_t result = {};
 
-	// Load and sort extensions
+	// Load layers.
+	//
+	// Layers are not sorted because the order is important; for example, layers that
+	// use an extension should be before layers that provide the extension.
 	uint32_t count = 0;
+	if (XR_FAILED(xrEnumerateApiLayerProperties(0, &count, nullptr)))
+		return result;
+	result.layers = array_t<XrApiLayerProperties>::make_fill(count, {XR_TYPE_API_LAYER_PROPERTIES});
+	xrEnumerateApiLayerProperties(count, &count, result.layers.data);
+
+	display_table_t table = {};
+	table.name_func = "xrEnumerateApiLayerProperties";
+	table.name_type = "XrApiLayerProperties";
+	table.spec      = "api-layers";
+	table.tag       = display_tag_features;
+	table.column_count = 3;
+	table.header_row   = true;
+	if (result.layers.count > 0) {
+		table.cols[0].add({ "Layer Name" });
+		table.cols[1].add({ "Description" });
+		table.cols[2].add({ "Version", "Version" });
+		for (size_t i = 0; i < result.layers.count; i++) {
+			table.cols[0].add({result.layers[i].layerName});
+			table.cols[1].add({result.layers[i].description});
+			table.cols[2].add({new_string("v%u",result.layers[i].layerVersion)});
+		}
+	} else {
+		table.error = "No layers present";
+	}
+	xr_tables.add(table);
+
+	// Load and sort extensions
+	count = 0;
 	if (XR_FAILED(xrEnumerateInstanceExtensionProperties(nullptr, 0, &count, nullptr)))
 		return result;
 	result.extensions = array_t<XrExtensionProperties>::make_fill(count, {XR_TYPE_EXTENSION_PROPERTIES});
@@ -278,7 +310,7 @@ xr_extensions_t openxr_load_exts() {
 		return strcmp(a.extensionName, b.extensionName);
 	});
 
-	display_table_t table = {};
+	table = {};
 	table.name_func = "xrEnumerateInstanceExtensionProperties";
 	table.name_type = "XrExtensionProperties";
 	table.spec      = "extensions";
@@ -292,33 +324,6 @@ xr_extensions_t openxr_load_exts() {
 		table.cols[0].add({result.extensions[i].extensionName});
 		table.cols[1].add({new_string("v%u",result.extensions[i].extensionVersion)});
 		table.cols[2].add({nullptr, result.extensions[i].extensionName});
-	}
-	xr_tables.add(table);
-
-	// Load layers.
-	//
-	// Layers are not sorted because the order is important; for example, layers that
-	// use an extension should be before layers that provide the extension.
-	count = 0;
-	if (XR_FAILED(xrEnumerateApiLayerProperties(0, &count, nullptr)))
-		return result;
-	result.layers = array_t<XrApiLayerProperties>::make_fill(count, {XR_TYPE_API_LAYER_PROPERTIES});
-	xrEnumerateApiLayerProperties(count, &count, result.layers.data);
-
-	table = {};
-	table.name_func = "xrEnumerateApiLayerProperties";
-	table.name_type = "XrApiLayerProperties";
-	table.spec      = "api-layers";
-	table.tag       = display_tag_features;
-	table.column_count = 3;
-	table.header_row   = true;
-	table.cols[0].add({ "Layer Name" });
-	table.cols[1].add({ "Description" });
-	table.cols[2].add({ "Version", "Version" });
-	for (size_t i = 0; i < result.layers.count; i++) {
-		table.cols[0].add({result.layers[i].layerName});
-		table.cols[1].add({result.layers[i].description});
-		table.cols[2].add({new_string("v%u",result.layers[i].layerVersion)});
 	}
 	xr_tables.add(table);
 
@@ -368,202 +373,8 @@ xr_properties_t openxr_load_properties() {
 	xr_tables.add(table);
 
 	//// System properties ////
-
-	const char *properties_err = nullptr;
-	if (!xr_instance_err && !xr_system_err) {
-		result.system                = { XR_TYPE_SYSTEM_PROPERTIES };
-		result.hand_tracking         = { XR_TYPE_SYSTEM_HAND_TRACKING_PROPERTIES_EXT };
-		result.hand_mesh             = { XR_TYPE_SYSTEM_HAND_TRACKING_MESH_PROPERTIES_MSFT };
-		result.gaze                  = { XR_TYPE_SYSTEM_EYE_GAZE_INTERACTION_PROPERTIES_EXT };
-		result.foveated_varjo        = { XR_TYPE_SYSTEM_FOVEATED_RENDERING_PROPERTIES_VARJO };
-		result.color_space_fb        = { XR_TYPE_SYSTEM_COLOR_SPACE_PROPERTIES_FB };
-		result.facial_tracking_htc   = { XR_TYPE_SYSTEM_FACIAL_TRACKING_PROPERTIES_HTC };
-		result.keyboard_tracking_fb  = { XR_TYPE_SYSTEM_KEYBOARD_TRACKING_PROPERTIES_FB };
-		result.marker_tracking_varjo = { XR_TYPE_SYSTEM_MARKER_TRACKING_PROPERTIES_VARJO };
-		result.passthrough_fb        = { XR_TYPE_SYSTEM_PASSTHROUGH_PROPERTIES_FB };
-		result.render_model_fb       = { XR_TYPE_SYSTEM_RENDER_MODEL_PROPERTIES_FB };
-		result.spatial_entity_fb     = { XR_TYPE_SYSTEM_SPATIAL_ENTITY_PROPERTIES_FB };
-		result.space_warp_fb         = { XR_TYPE_SYSTEM_SPACE_WARP_PROPERTIES_FB };
-
-		XR_NEXT_INSERT(result.system, result.hand_tracking);
-		XR_NEXT_INSERT(result.system, result.hand_mesh);
-		XR_NEXT_INSERT(result.system, result.gaze);
-		XR_NEXT_INSERT(result.system, result.foveated_varjo);
-		XR_NEXT_INSERT(result.system, result.color_space_fb);
-		XR_NEXT_INSERT(result.system, result.facial_tracking_htc);
-		XR_NEXT_INSERT(result.system, result.keyboard_tracking_fb);
-		XR_NEXT_INSERT(result.system, result.marker_tracking_varjo);
-		XR_NEXT_INSERT(result.system, result.passthrough_fb);
-		XR_NEXT_INSERT(result.system, result.render_model_fb);
-		XR_NEXT_INSERT(result.system, result.spatial_entity_fb);
-		XR_NEXT_INSERT(result.system, result.space_warp_fb);
-
-		XrResult error = xrGetSystemProperties(xr_instance, xr_system_id, &result.system);
-		if (XR_FAILED(error)) {
-			properties_err = openxr_result_string(error);
-		}
-	} else {
-		if (xr_system_err)   properties_err = "No XrSystemId available";
-		if (xr_instance_err) properties_err = "No XrInstance available";
-	}
-
-	table = {};
-	table.name_func = "xrGetSystemProperties";
-	table.name_type = "XrSystemProperties";
-	table.spec      = "XrSystemProperties";
-	table.error     = properties_err;
-	table.tag       = display_tag_properties;
-	table.column_count = 2;
-	table.cols[0].add({"systemName"         }); table.cols[1].add({new_string("%s",result.system.systemName)});
-	table.cols[0].add({"vendorId"           }); table.cols[1].add({new_string("%u",result.system.vendorId)});
-	table.cols[0].add({"orientationTracking"}); table.cols[1].add({result.system.trackingProperties.orientationTracking ? "True":"False"});
-	table.cols[0].add({"positionTracking"   }); table.cols[1].add({result.system.trackingProperties.positionTracking ? "True":"False"});
-	table.cols[0].add({"graphics.maxLayerCount"          }); table.cols[1].add({new_string("%u", result.system.graphicsProperties.maxLayerCount)});
-	table.cols[0].add({"graphics.maxSwapchainImageWidth" }); table.cols[1].add({new_string("%u", result.system.graphicsProperties.maxSwapchainImageWidth)});
-	table.cols[0].add({"graphics.maxSwapchainImageHeight"}); table.cols[1].add({new_string("%u", result.system.graphicsProperties.maxSwapchainImageHeight)});
-	xr_tables.add(table);
-
-	table = {};
-	table.name_func = "xrGetSystemProperties";
-	table.name_type = "XrSystemEyeGazeInteractionPropertiesEXT";
-	table.spec      = "XrSystemEyeGazeInteractionPropertiesEXT";
-	table.error     = properties_err;
-	table.tag       = display_tag_properties;
-	table.show_type = true;
-	table.column_count = 2;
-	table.cols[0].add({"supportsEyeGazeInteraction"}); table.cols[1].add({result.gaze.supportsEyeGazeInteraction ? "True":"False"});
-	xr_tables.add(table);
-
-	table = {};
-	table.name_func = "xrGetSystemProperties";
-	table.name_type = "XrSystemHandTrackingPropertiesEXT";
-	table.spec      = "XrSystemHandTrackingPropertiesEXT";
-	table.error     = properties_err;
-	table.tag       = display_tag_properties;
-	table.show_type = true;
-	table.column_count = 2;
-	table.cols[0].add({"supportsHandTracking"}); table.cols[1].add({result.hand_tracking.supportsHandTracking ? "True":"False"});
-	xr_tables.add(table);
-
-	table = {};
-	table.name_func = "xrGetSystemProperties";
-	table.name_type = "XrSystemColorSpacePropertiesFB";
-	table.spec      = "XrSystemColorSpacePropertiesFB";
-	table.error     = properties_err;
-	table.tag       = display_tag_properties;
-	table.show_type = true;
-	table.column_count = 2;
-	const char *color_space_name = "N/A";
-	switch (result.color_space_fb.colorSpace) {
-#define CASE_GET_NAME(e, val) case e: color_space_name = #e; break;
-		XR_LIST_ENUM_XrColorSpaceFB(CASE_GET_NAME)
-#undef CASE_GET_NAME
-	}
-	table.cols[0].add({"colorSpace"}); table.cols[1].add({color_space_name});
-	xr_tables.add(table);
-
-	table = {};
-	table.name_func    = "xrGetSystemProperties";
-	table.name_type    = "XrSystemKeyboardTrackingPropertiesFB";
-	table.spec         = "XrSystemKeyboardTrackingPropertiesFB";
-	table.error        = properties_err;
-	table.tag          = display_tag_properties;
-	table.show_type    = true;
-	table.column_count = 2;
-	table.cols[0].add({"supportsKeyboardTracking"}); table.cols[1].add({result.keyboard_tracking_fb.supportsKeyboardTracking ? "True":"False"});
-	xr_tables.add(table);
-
-	table = {};
-	table.name_func    = "xrGetSystemProperties";
-	table.name_type    = "XrSystemPassthroughPropertiesFB";
-	table.spec         = "XrSystemPassthroughPropertiesFB";
-	table.error        = properties_err;
-	table.tag          = display_tag_properties;
-	table.show_type    = true;
-	table.column_count = 2;
-	table.cols[0].add({"supportsPassthrough"}); table.cols[1].add({result.passthrough_fb.supportsPassthrough ? "True":"False"});
-	xr_tables.add(table);
-
-	table = {};
-	table.name_func    = "xrGetSystemProperties";
-	table.name_type    = "XrSystemRenderModelPropertiesFB";
-	table.spec         = "XrSystemRenderModelPropertiesFB";
-	table.error        = properties_err;
-	table.tag          = display_tag_properties;
-	table.show_type    = true;
-	table.column_count = 2;
-	table.cols[0].add({"supportsRenderModelLoading"}); table.cols[1].add({result.render_model_fb.supportsRenderModelLoading ? "True":"False"});
-	xr_tables.add(table);
-
-	table = {};
-	table.name_func    = "xrGetSystemProperties";
-	table.name_type    = "XrSystemSpaceWarpPropertiesFB";
-	table.spec         = "XrSystemSpaceWarpPropertiesFB";
-	table.error        = properties_err;
-	table.tag          = display_tag_properties;
-	table.show_type    = true;
-	table.column_count = 2;
-	table.cols[0].add({"recommendedMotionVectorImageRectHeight"}); table.cols[1].add({ new_string("%u", result.space_warp_fb.recommendedMotionVectorImageRectHeight) });
-	table.cols[0].add({"recommendedMotionVectorImageRectWidth" }); table.cols[1].add({ new_string("%u", result.space_warp_fb.recommendedMotionVectorImageRectWidth ) });
-	xr_tables.add(table);
-
-	table = {};
-	table.name_func    = "xrGetSystemProperties";
-	table.name_type    = "XrSystemSpatialEntityPropertiesFB ";
-	table.spec         = "XrSystemSpatialEntityPropertiesFB";
-	table.error        = properties_err;
-	table.tag          = display_tag_properties;
-	table.show_type    = true;
-	table.column_count = 2;
-	table.cols[0].add({ "supportsSpatialEntity" }); table.cols[1].add({ result.spatial_entity_fb.supportsSpatialEntity ? "True" : "False" });
-	xr_tables.add(table);
-
-	table = {};
-	table.name_func    = "xrGetSystemProperties";
-	table.name_type    = "XrSystemFacialTrackingPropertiesHTC";
-	table.spec         = "XrSystemFacialTrackingPropertiesHTC";
-	table.error        = properties_err;
-	table.tag          = display_tag_properties;
-	table.show_type    = true;
-	table.column_count = 2;
-	table.cols[0].add({"supportEyeFacialTracking"}); table.cols[1].add({result.facial_tracking_htc.supportEyeFacialTracking ? "True":"False"});
-	table.cols[0].add({"supportLipFacialTracking"}); table.cols[1].add({result.facial_tracking_htc.supportLipFacialTracking ? "True":"False"});
-	xr_tables.add(table);
-
-	table = {};
-	table.name_func = "xrGetSystemProperties";
-	table.name_type = "XrSystemHandTrackingMeshPropertiesMSFT";
-	table.spec      = "XrSystemHandTrackingMeshPropertiesMSFT";
-	table.error     = properties_err;
-	table.tag       = display_tag_properties;
-	table.show_type = true;
-	table.column_count = 2;
-	table.cols[0].add({"supportsHandTrackingMesh"}); table.cols[1].add({result.hand_mesh.supportsHandTrackingMesh ? "True":"False"});
-	table.cols[0].add({"maxHandMeshIndexCount"   }); table.cols[1].add({new_string("%u", result.hand_mesh.maxHandMeshIndexCount)});
-	table.cols[0].add({"maxHandMeshVertexCount"  }); table.cols[1].add({new_string("%u", result.hand_mesh.maxHandMeshVertexCount)});
-	xr_tables.add(table);
-
-	table = {};
-	table.name_func = "xrGetSystemProperties";
-	table.name_type = "XrSystemFoveatedRenderingPropertiesVARJO";
-	table.spec      = "XrSystemFoveatedRenderingPropertiesVARJO";
-	table.error     = properties_err;
-	table.tag       = display_tag_properties;
-	table.show_type = true;
-	table.column_count = 2;
-	table.cols[0].add({"supportsFoveatedRendering"}); table.cols[1].add({result.foveated_varjo.supportsFoveatedRendering ? "True":"False"});
-	xr_tables.add(table);
-
-	table = {};
-	table.name_func    = "xrGetSystemProperties";
-	table.name_type    = "XrSystemMarkerTrackingPropertiesVARJO";
-	table.spec         = "XrSystemMarkerTrackingPropertiesVARJO";
-	table.error        = properties_err;
-	table.tag          = display_tag_properties;
-	table.show_type    = true;
-	table.column_count = 2;
-	table.cols[0].add({"supportsMarkerTracking"}); table.cols[1].add({result.marker_tracking_varjo.supportsMarkerTracking ? "True":"False"});
-	xr_tables.add(table);
+	
+	openxr_load_system_properties(xr_instance, xr_system_id);
 
 	return result;
 }
@@ -772,23 +583,23 @@ void openxr_register_enums() {
 		for (size_t i = 0; i < formats.count; i++) {
 			skg_tex_fmt_ format = skg_tex_fmt_from_native(formats[i]);
 			switch (format) {
-			case skg_tex_fmt_none:          ref_info->items.add("skg_tex_fmt_unrecognized");    break;
-			case skg_tex_fmt_rgba32:        ref_info->items.add("skg_tex_fmt_rgba32");          break;
-			case skg_tex_fmt_rgba32_linear: ref_info->items.add("skg_tex_fmt_rgba32_linear");   break;
-			case skg_tex_fmt_bgra32:        ref_info->items.add("skg_tex_fmt_bgra32");          break;
-			case skg_tex_fmt_bgra32_linear: ref_info->items.add("skg_tex_fmt_bgra32_linear");   break;
-			case skg_tex_fmt_rg11b10:       ref_info->items.add("skg_tex_fmt_rg11b10");         break;
-			case skg_tex_fmt_rgb10a2:       ref_info->items.add("skg_tex_fmt_rgb10a2");         break;
-			case skg_tex_fmt_rgba64u:       ref_info->items.add("skg_tex_fmt_rgba64u");         break;
-			case skg_tex_fmt_rgba64s:       ref_info->items.add("skg_tex_fmt_rgba64s");         break;
-			case skg_tex_fmt_rgba64f:       ref_info->items.add("skg_tex_fmt_rgba64f");         break;
-			case skg_tex_fmt_rgba128:       ref_info->items.add("skg_tex_fmt_rgba128");         break;
-			case skg_tex_fmt_r8:            ref_info->items.add("skg_tex_fmt_r8");              break;
-			case skg_tex_fmt_r16:           ref_info->items.add("skg_tex_fmt_r16");             break;
-			case skg_tex_fmt_r32:           ref_info->items.add("skg_tex_fmt_r32");             break;
-			case skg_tex_fmt_depthstencil:  ref_info->items.add("skg_tex_fmt_depth24stencil8"); break;
-			case skg_tex_fmt_depth32:       ref_info->items.add("skg_tex_fmt_depth32");         break;
-			case skg_tex_fmt_depth16:       ref_info->items.add("skg_tex_fmt_depth16");         break;
+			case skg_tex_fmt_none:          ref_info->items.add(new_string("Unknown 0x%x #%d", formats[i], formats[i])); break;
+			case skg_tex_fmt_rgba32:        ref_info->items.add("rgba32");          break;
+			case skg_tex_fmt_rgba32_linear: ref_info->items.add("rgba32 linear");   break;
+			case skg_tex_fmt_bgra32:        ref_info->items.add("bgra32");          break;
+			case skg_tex_fmt_bgra32_linear: ref_info->items.add("bgra32 linear");   break;
+			case skg_tex_fmt_rg11b10:       ref_info->items.add("rg11 b10");        break;
+			case skg_tex_fmt_rgb10a2:       ref_info->items.add("rgb10 a2");        break;
+			case skg_tex_fmt_rgba64u:       ref_info->items.add("rgba64u");         break;
+			case skg_tex_fmt_rgba64s:       ref_info->items.add("rgba64s");         break;
+			case skg_tex_fmt_rgba64f:       ref_info->items.add("rgba64f");         break;
+			case skg_tex_fmt_rgba128:       ref_info->items.add("rgba128");         break;
+			case skg_tex_fmt_r8:            ref_info->items.add("r8");              break;
+			case skg_tex_fmt_r16:           ref_info->items.add("r16");             break;
+			case skg_tex_fmt_r32:           ref_info->items.add("r32");             break;
+			case skg_tex_fmt_depthstencil:  ref_info->items.add("depth24 stencil8");break;
+			case skg_tex_fmt_depth32:       ref_info->items.add("depth32");         break;
+			case skg_tex_fmt_depth16:       ref_info->items.add("depth16");         break;
 			}
 		}
 		formats.free();

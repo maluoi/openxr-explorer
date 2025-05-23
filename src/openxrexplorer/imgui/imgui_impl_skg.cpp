@@ -157,3 +157,18 @@ void ImGui_ImplSkg_Shutdown() {
 
 	skg_tex_destroy(&im_font_tex);
 }
+
+void ImGui_ImplSkg_NewFrame() {
+	ImGuiIO& io = ImGui::GetIO();
+	if (!io.Fonts->IsBuilt()) {
+		void*    pixels;
+		int      width, height;
+		io.Fonts->GetTexDataAsRGBA32((unsigned char **)&pixels, &width, &height);
+
+		if (skg_tex_is_valid(&im_font_tex))
+			skg_tex_destroy(&im_font_tex);
+		im_font_tex = skg_tex_create(skg_tex_type_image, skg_use_static, skg_tex_fmt_rgba32_linear, skg_mip_none);
+		skg_tex_set_contents(&im_font_tex, pixels, width, height);
+		io.Fonts->TexID = (ImTextureID)&im_font_tex;
+	}
+}
