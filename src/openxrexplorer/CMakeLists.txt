@@ -29,6 +29,8 @@ add_executable(openxr-explorer
     main.cpp
     openxr_info.h
     openxr_info.cpp
+    openxr_properties.h
+    openxr_properties.cpp
     app_cli.h
     app_cli.cpp
     app_imgui.h

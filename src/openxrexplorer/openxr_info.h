@@ -63,20 +63,7 @@ struct xr_enum_info_t {
 };
 
 struct xr_properties_t {
-	XrInstanceProperties                     instance;
-	XrSystemProperties                       system;
-	XrSystemHandTrackingPropertiesEXT        hand_tracking;
-	XrSystemHandTrackingMeshPropertiesMSFT   hand_mesh;
-	XrSystemEyeGazeInteractionPropertiesEXT  gaze;
-	XrSystemFoveatedRenderingPropertiesVARJO foveated_varjo;
-	XrSystemColorSpacePropertiesFB           color_space_fb;
-	XrSystemFacialTrackingPropertiesHTC      facial_tracking_htc;
-	XrSystemKeyboardTrackingPropertiesFB     keyboard_tracking_fb;
-	XrSystemMarkerTrackingPropertiesVARJO    marker_tracking_varjo;
-	XrSystemPassthroughPropertiesFB          passthrough_fb;
-	XrSystemRenderModelPropertiesFB          render_model_fb;
-	XrSystemSpatialEntityPropertiesFB        spatial_entity_fb;
-	XrSystemSpaceWarpPropertiesFB            space_warp_fb;
+	XrInstanceProperties instance;
 };
 
 struct xr_view_info_t {
@@ -105,3 +92,6 @@ extern const char* xr_runtime_name;
 
 void openxr_info_reload (xr_settings_t settings);
 void openxr_info_release();
+
+const char *openxr_result_string(XrResult result);
+const char *new_string(const char *format, ...);
