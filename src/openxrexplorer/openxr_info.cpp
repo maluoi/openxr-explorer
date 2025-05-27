@@ -184,6 +184,10 @@ void openxr_init_instance(array_t<XrExtensionProperties> extensions) {
 	snprintf(create_info.applicationInfo.engineName,      sizeof(create_info.applicationInfo.engineName     ), "None");
 	
 	XrResult result = xrCreateInstance(&create_info, &xr_instance);
+	if (result == XR_ERROR_API_VERSION_UNSUPPORTED) {
+		create_info.applicationInfo.apiVersion = XR_API_VERSION_1_0;
+		result = xrCreateInstance(&create_info, &xr_instance);
+	}
 	if (XR_FAILED(result)) {
 		xr_instance_err = openxr_result_string(result);
 		xr_system_err   = "No XrInstance available";
