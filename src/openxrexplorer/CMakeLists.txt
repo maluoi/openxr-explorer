@@ -1,4 +1,4 @@
-project(openxr-explorer VERSION 1.6
+project(openxr-explorer VERSION 1.7
                         DESCRIPTION "A cross-platform OpenXR capabilities explorer and runtime switcher with a CLI and GUI."
                         LANGUAGES CXX)
 
