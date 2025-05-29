@@ -32,11 +32,15 @@ jobs:
 
     - name: Pack
       run: |
+        # Read the version number outputted from cmake
+        $version = Get-Content -Path "build/version.txt" -Raw
+        Write-Host "Version: $version"
+
         if ("${{ matrix.os }}" -eq "windows-latest") {
-          $fileName = "openxr-explorer-win-x64.zip"
+          $fileName = "openxr-explorer-win-x64-v$version.zip"
           $paths = $(Join-Path "build" "Release" "openxr-explorer.exe"), $(Join-Path "build" "Release" "xrsetruntime.exe")
         } else {
-          $fileName = "openxr-explorer-linux-x64.zip"
+          $fileName = "openxr-explorer-linux-x64-v$version.zip"
           $paths = $(Join-Path "build" "openxr-explorer"), $(Join-Path "build" "xrsetruntime")
         }
         Compress-Archive -Force -Path $paths -DestinationPath $fileName

@@ -27,6 +27,9 @@ add_subdirectory(src)
 install(TARGETS openxr-explorer xrsetruntime
         DESTINATION bin)
 
+# Output the version number, for use with build systems
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/version.txt" "${CMAKE_PROJECT_VERSION}")
+
 # CLI commands for installation on Linux
 #
 # Command to install via cmake:
