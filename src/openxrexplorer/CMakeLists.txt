@@ -1,6 +1,6 @@
-project(openxr-explorer VERSION 1.7
-                        DESCRIPTION "A cross-platform OpenXR capabilities explorer and runtime switcher with a CLI and GUI."
-                        LANGUAGES CXX)
+project(openxr-explorer 
+    DESCRIPTION "A cross-platform OpenXR capabilities explorer and runtime switcher with a CLI and GUI."
+    LANGUAGES CXX)
 
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 

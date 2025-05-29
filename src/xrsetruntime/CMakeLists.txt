@@ -1,6 +1,6 @@
-project(xrsetruntime VERSION 1.7
-                     DESCRIPTION "Sets the OpenXR runtime"
-                     LANGUAGES CXX)
+project(xrsetruntime
+    DESCRIPTION "Sets the OpenXR runtime"
+    LANGUAGES CXX)
 
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 
