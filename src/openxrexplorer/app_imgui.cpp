@@ -126,6 +126,8 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		if (wParam != SIZE_MINIMIZED) {
 			sk_width  = LOWORD(lParam);
 			sk_height = HIWORD(lParam);
+			if (sk_width <1) sk_width  = 1;
+			if (sk_height<1) sk_height = 1;
 			skg_swapchain_resize(&sk_swapchain, (UINT)sk_width, (UINT)sk_height);
 		}
 		return 0;
@@ -420,6 +422,8 @@ void shell_loop(void (*step)()) {
 				// Checking window size is request/response
 				sk_width  = config->width;
 				sk_height = config->height;
+				if (sk_width <1) sk_width  = 1;
+				if (sk_height<1) sk_height = 1;
 				ImGui::GetIO().DisplaySize = ImVec2(sk_width, sk_height);
 				skg_swapchain_resize(&sk_swapchain, sk_width, sk_height);
 				break;

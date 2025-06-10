@@ -1,6 +1,7 @@
 #pragma once
 
 #include "array.h"
+#include "ferr_thread.h"
 #include "imgui/sk_gpu.h"
 #if defined(SKG_DIRECT3D11)
 #define XR_USE_GRAPHICS_API_D3D11
@@ -59,7 +60,7 @@ struct xr_enum_info_t {
 	bool                  requires_session;
 	display_tag_          tag;
 	array_t<const char *> items;
-	XrResult            (*load_info)(xr_enum_info_t *ref_info, xr_settings_t settings);
+	XrResult            (*load_info)(XrInstance instance, XrSystemId system_id, XrSession session, xr_enum_info_t *ref_info, xr_settings_t settings);
 };
 
 struct xr_properties_t {
@@ -90,7 +91,7 @@ extern const char* xr_runtime_name;
 
 /*** Signatures **************************/
 
-void openxr_info_reload (xr_settings_t settings);
+void openxr_info_reload (xr_settings_t settings, ft_mutex_t* lock);
 void openxr_info_release();
 
 const char *openxr_result_string(XrResult result);

@@ -50,7 +50,7 @@ foreach ($struct in $systemPropertiesStructs) {
 	}
 	$generatedContent += "	$structName props$idx = { $xrStructureType };"
 	$generatedContent += "	sys_props.next = &props$idx;"
-	$generatedContent += "	error = xrGetSystemProperties(xr_instance, xr_system_id, &sys_props);"
+	$generatedContent += "	error = xrGetSystemProperties(instance, system_id, &sys_props);"
 	$generatedContent += "	if (XR_FAILED(error)) properties_err = openxr_result_string(error);"
 	$generatedContent += "	table = {};"
 	$generatedContent += "	table.error        = properties_err;"
@@ -80,7 +80,7 @@ foreach ($struct in $systemPropertiesStructs) {
 			}
 		}
 	}
-	$generatedContent += "	xr_tables.add(table);"
+	$generatedContent += "	tables->add(table);"
 	$generatedContent += ""
 
 	$idx += 1

@@ -1,5 +1,6 @@
 #include "openxr_info.h"
 #include "openxr_properties.h"
+#include "openxr_properties.h"
 
 #if defined(__linux__)
 #include <GL/glxew.h>
@@ -42,58 +43,70 @@ const char* xr_runtime_name = "No runtime set";
 
 /*** Signatures **************************/
 
-void openxr_init_instance(array_t<XrExtensionProperties> extensions);
-void openxr_init_system  (XrFormFactor form);
-void openxr_init_session ();
+bool      openxr_init_instance(array_t<XrExtensionProperties> extensions, XrInstance* instance, const char** instance_err);
+bool      openxr_init_system  (XrInstance instance, XrFormFactor form, XrSystemId* system_id, const char** system_err);
+XrSession openxr_init_session (XrInstance instance, XrSystemId system_id, const char** session_err);
 
-xr_extensions_t openxr_load_exts      ();
-xr_properties_t openxr_load_properties();
-xr_view_info_t  openxr_load_view      (XrViewConfigurationType view_config);
-void            openxr_load_enums     (xr_settings_t settings);
-const char *    openxr_result_string  (XrResult result);
-void            openxr_register_enums ();
-bool            openxr_has_ext        (const char *ext_name);
+xr_extensions_t         openxr_load_exts      (array_t<display_table_t>* tables);
+xr_properties_t         openxr_load_properties(XrInstance instance, XrSystemId system_id, const char** runtime_name, array_t<display_table_t>* tables);
+xr_view_info_t          openxr_load_view      (XrInstance instance, XrSystemId system_id, XrViewConfigurationType view_config, array_t<display_table_t>* tables);
+void                    openxr_load_enums     (XrInstance instance, XrSystemId system_id, xr_settings_t settings, array_t<xr_enum_info_t> misc_enums, array_t<display_table_t>* tables, const char** session_err);
+const char *            openxr_result_string  (XrResult result);
+array_t<xr_enum_info_t> openxr_register_enums ();
+bool                    openxr_has_ext        (const char *ext_name);
 
 
 /*** Code ********************************/
 
-void openxr_info_reload(xr_settings_t settings) {
+void openxr_info_reload(xr_settings_t settings, ft_mutex_t* lock) {
+	if (lock) ft_mutex_lock(*lock);
 	openxr_info_release();
+	if (lock) ft_mutex_unlock(*lock);
 
-	xr_extensions = openxr_load_exts();
-	openxr_init_instance(xr_extensions.extensions);
-	openxr_init_system  (settings.form);
-	xr_properties = openxr_load_properties();
-	xr_view       = openxr_load_view      (settings.view_config);
+	array_t<display_table_t> tables = {};
+	xr_extensions_t new_extensions = openxr_load_exts(&tables);
 
-	openxr_register_enums();
-	openxr_load_enums    (settings);
+	if (lock) ft_mutex_lock(*lock);
+	xr_extensions = new_extensions;
+	if (lock) ft_mutex_unlock(*lock);
 
-	if (xr_session) {
-		xrDestroySession(xr_session);
-		xr_session = XR_NULL_HANDLE;
+	if(!openxr_init_instance(xr_extensions.extensions, &xr_instance, &xr_instance_err)){
+		xr_system_err  = "No XrInstance available";
 	}
+	if (!openxr_init_system(xr_instance, settings.form, &xr_system_id, &xr_system_err)) {
+		if (settings.allow_session)
+			xr_session_err = "No XrSystemId available";
+	}
+	xr_properties = openxr_load_properties(xr_instance, xr_system_id, &xr_runtime_name, &tables);
+	xr_view       = openxr_load_view      (xr_instance, xr_system_id, settings.view_config, &tables);
+
+	xr_misc_enums = openxr_register_enums();
+	openxr_load_enums(xr_instance, xr_system_id, settings, xr_misc_enums, &tables, &xr_session_err);
+
+	if (lock) ft_mutex_lock(*lock);
+	xr_tables = tables;
+	if (lock) ft_mutex_unlock(*lock);
 }
 
 ///////////////////////////////////////////
 
 void openxr_info_release() {
 	xr_misc_enums.each([](xr_enum_info_t &i) { i.items.free(); });
-	xr_misc_enums.free();
+	xr_misc_enums.clear();
 	xr_properties = {};
-	xr_view.available_configs     .free();
-	xr_view.available_config_names.free();
-	xr_view.config_views          .free();
+	xr_view.available_configs     .clear();
+	xr_view.available_config_names.clear();
+	xr_view.config_views          .clear();
 	xr_view = {};
-	xr_extensions.extensions.free();
-	xr_extensions.layers    .free();
+	xr_extensions.extensions.clear();
+	xr_extensions.layers    .clear();
 	xr_extensions = {};
 	xr_runtime_name = "No runtime set";
 
 	xr_table_strings.each(free);
-	xr_table_strings.free();
+	xr_table_strings.clear();
 	xr_tables.each([](display_table_t &t) {for (int32_t i=0; i<t.column_count; i++) t.cols[i].free(); });
-	xr_tables.free();
+	xr_tables.clear();
 
 	if (xr_session)  xrDestroySession (xr_session);
 	if (xr_instance) xrDestroyInstance(xr_instance);
@@ -154,9 +167,9 @@ const char *new_string(const char *format, ...) {
 
 ///////////////////////////////////////////
 
-void openxr_init_instance(array_t<XrExtensionProperties> extensions) {
-	if (xr_instance != XR_NULL_HANDLE || xr_instance_err != nullptr)
-		return;
+bool openxr_init_instance(array_t<XrExtensionProperties> extensions, XrInstance* instance, const char **instance_err) {
+	if (*instance != XR_NULL_HANDLE || *instance_err != nullptr)
+		return false;
 
 	array_t<const char *> exts = {};
 #if defined(XR_USE_GRAPHICS_API_OPENGL)
@@ -183,51 +196,47 @@ void openxr_init_instance(array_t<XrExtensionProperties> extensions) {
 	snprintf(create_info.applicationInfo.applicationName, sizeof(create_info.applicationInfo.applicationName), "%s", "OpenXR Explorer");
 	snprintf(create_info.applicationInfo.engineName,      sizeof(create_info.applicationInfo.engineName     ), "None");
 	
-	XrResult result = xrCreateInstance(&create_info, &xr_instance);
+	XrResult result = xrCreateInstance(&create_info, instance);
 	if (result == XR_ERROR_API_VERSION_UNSUPPORTED) {
 		create_info.applicationInfo.apiVersion = XR_API_VERSION_1_0;
-		result = xrCreateInstance(&create_info, &xr_instance);
+		result = xrCreateInstance(&create_info, instance);
 	}
 	if (XR_FAILED(result)) {
-		xr_instance_err = openxr_result_string(result);
-		xr_system_err   = "No XrInstance available";
-		xr_session_err  = "No XrInstance available";
+		*instance_err = openxr_result_string(result);
+		return false;
 	}
+	return true;
 }
 
 ///////////////////////////////////////////
 
-void openxr_init_system(XrFormFactor form) {
-	if (xr_instance_err != nullptr) {
-		xr_system_err  = "No XrInstance available";
-		xr_session_err = "No XrInstance available";
-		return;
-	}
-	if (xr_system_id != XR_NULL_SYSTEM_ID || xr_system_err != nullptr) 
-		return;
+bool openxr_init_system(XrInstance instance, XrFormFactor form, XrSystemId* system_id, const char** system_err) {
+	if (instance == XR_NULL_HANDLE || *system_id != XR_NULL_SYSTEM_ID || *system_err != nullptr) 
+		return false;
 
 	XrSystemGetInfo system_info = { XR_TYPE_SYSTEM_GET_INFO };
 	system_info.formFactor = form;
-	XrResult result = xrGetSystem(xr_instance, &system_info, &xr_system_id);
+	XrResult result = xrGetSystem(instance, &system_info, system_id);
 	if (XR_FAILED(result)) {
-		xr_system_err = openxr_result_string(result);
-		xr_session_err = "No XrSystemId available";
+		*system_err = openxr_result_string(result);
+		return false;
 	}
+	return true;
 }
 
 ///////////////////////////////////////////
 
-void openxr_init_session() {
-	if (xr_instance_err != nullptr) {
-		xr_session_err = "No XrInstance available";
-		return;
+XrSession openxr_init_session(XrInstance instance, XrSystemId system_id, const char** session_err) {
+	if (instance == XR_NULL_HANDLE) {
+		*session_err = "No XrInstance";
+		return XR_NULL_HANDLE;
 	}
-	if (xr_system_err != nullptr) {
-		xr_session_err = "No XrSystemId available";
-		return;
+	if (system_id == XR_NULL_SYSTEM_ID) {
+		*session_err = "No XrSystemId";
+		return XR_NULL_HANDLE;
 	}
-	if (xr_session != XR_NULL_HANDLE || xr_session_err != nullptr)
-		return;
+	if (*session_err != nullptr)
+		return XR_NULL_HANDLE;
 
 	skg_platform_data_t platform = skg_get_platform_data();
 #if defined(SKG_OPENGL) && defined(__linux__)
@@ -239,8 +248,8 @@ void openxr_init_session() {
 	gfx_binding.glxFBConfig = (GLXFBConfig)platform._glx_fb_config;
 	gfx_binding.glxDrawable = (GLXDrawable)platform._glx_drawable;
 	gfx_binding.glxContext  = (GLXContext )platform._glx_context;
-	xrGetInstanceProcAddr(xr_instance, "xrGetOpenGLGraphicsRequirementsKHR", (PFN_xrVoidFunction *)(&ext_xrGetOpenGLGraphicsRequirementsKHR));
-	ext_xrGetOpenGLGraphicsRequirementsKHR(xr_instance, xr_system_id, &requirement);
+	xrGetInstanceProcAddr(instance, "xrGetOpenGLGraphicsRequirementsKHR", (PFN_xrVoidFunction *)(&ext_xrGetOpenGLGraphicsRequirementsKHR));
+	ext_xrGetOpenGLGraphicsRequirementsKHR(instance, system_id, &requirement);
 #elif defined(SKG_OPENGL) && defined(_WIN32)
 	XrGraphicsBindingOpenGLKHR gfx_binding = { XR_TYPE_GRAPHICS_BINDING_OPENGL_KHR };
 	gfx_binding.hDC   = (HDC  )platform._gl_hdc;
@@ -250,27 +259,30 @@ void openxr_init_session() {
 	XrGraphicsRequirementsD3D11KHR        requirement = { XR_TYPE_GRAPHICS_REQUIREMENTS_D3D11_KHR };
 	XrGraphicsBindingD3D11KHR             gfx_binding = { XR_TYPE_GRAPHICS_BINDING_D3D11_KHR };
 	xrGetInstanceProcAddr(xr_instance, "xrGetD3D11GraphicsRequirementsKHR", (PFN_xrVoidFunction *)(&ext_xrGetD3D11GraphicsRequirementsKHR));
-	ext_xrGetD3D11GraphicsRequirementsKHR(xr_instance, xr_system_id, &requirement);
+	ext_xrGetD3D11GraphicsRequirementsKHR(instance, system_id, &requirement);
 	gfx_binding.device = (ID3D11Device*)platform._d3d11_device;
 #endif
 
 	XrSessionCreateInfo session_info = { XR_TYPE_SESSION_CREATE_INFO };
 	session_info.next     = &gfx_binding;
-	session_info.systemId = xr_system_id;
+	session_info.systemId = system_id;
 
 	// If the headless extension is present, we don't need a graphics binding!
 	if (openxr_has_ext("XR_MND_headless"))
 		session_info.next = nullptr;
 
-	XrResult result = xrCreateSession(xr_instance, &session_info, &xr_session);
+	XrSession session;
+	XrResult  result = xrCreateSession(instance, &session_info, &session);
 	if (XR_FAILED(result)) {
-		xr_session_err = openxr_result_string(result);
+		*session_err = openxr_result_string(result);
+		return XR_NULL_HANDLE;
 	}
+	return session;
 }
 
 ///////////////////////////////////////////
 
-xr_extensions_t openxr_load_exts() {
+xr_extensions_t openxr_load_exts(array_t<display_table_t>* tables) {
 	xr_extensions_t result = {};
 
 	// Load layers.
@@ -302,7 +314,7 @@ xr_extensions_t openxr_load_exts() {
 	} else {
 		table.error = "No layers present";
 	}
-	xr_tables.add(table);
+	tables->add(table);
 
 	// Load and sort extensions
 	count = 0;
@@ -329,7 +341,7 @@ xr_extensions_t openxr_load_exts() {
 		table.cols[1].add({new_string("v%u",result.extensions[i].extensionVersion)});
 		table.cols[2].add({nullptr, result.extensions[i].extensionName});
 	}
-	xr_tables.add(table);
+	tables->add(table);
 
 	return result;
 }
@@ -346,7 +358,7 @@ bool openxr_has_ext(const char *ext_name){
 
 ///////////////////////////////////////////
 
-xr_properties_t openxr_load_properties() {
+xr_properties_t openxr_load_properties(XrInstance instance, XrSystemId system_id, const char** runtime_name, array_t<display_table_t>* tables) {
 	xr_properties_t result = {};
 
 	//// Instance properties ////
@@ -358,13 +370,13 @@ xr_properties_t openxr_load_properties() {
 	table.tag       = display_tag_properties;
 	table.column_count = 2;
 
-	if (!xr_instance_err) {
+	if (instance != XR_NULL_HANDLE) {
 		result.instance = { XR_TYPE_INSTANCE_PROPERTIES };
-		XrResult error = xrGetInstanceProperties(xr_instance, &result.instance);
+		XrResult error = xrGetInstanceProperties(instance, &result.instance);
 		if (XR_FAILED(error)) {
 			table.error = openxr_result_string(error);
 		} else {
-			xr_runtime_name = new_string("%s", result.instance.runtimeName);
+			*runtime_name = new_string("%s", result.instance.runtimeName);
 			table.cols[0].add({ "runtimeName"    }); table.cols[1].add({ new_string("%s", result.instance.runtimeName) });
 			table.cols[0].add({ "runtimeVersion" }); table.cols[1].add({ new_string("%d.%d.%d",
 				(int32_t)XR_VERSION_MAJOR(result.instance.runtimeVersion),
@@ -374,26 +386,26 @@ xr_properties_t openxr_load_properties() {
 	} else {
 		table.error = "No XrInstance available";
 	}
-	xr_tables.add(table);
+	tables->add(table);
 
 	//// System properties ////
 	
-	openxr_load_system_properties(xr_instance, xr_system_id);
+	openxr_load_system_properties(instance, system_id, tables);
 
 	return result;
 }
 
 ///////////////////////////////////////////
 
-xr_view_info_t openxr_load_view(XrViewConfigurationType view_config) {
+xr_view_info_t openxr_load_view(XrInstance instance, XrSystemId system_id, XrViewConfigurationType view_config, array_t<display_table_t>* tables) {
 	xr_view_info_t result = {};
 
-	if (!xr_instance_err && ! xr_system_err) {
+	if (instance != XR_NULL_HANDLE && system_id != XR_NULL_SYSTEM_ID) {
 		// Get the list of available configurations
 		uint32_t count = 0;
-		xrEnumerateViewConfigurations(xr_instance, xr_system_id, 0, &count, nullptr);
+		xrEnumerateViewConfigurations(instance, system_id, 0, &count, nullptr);
 		result.available_configs = array_t<XrViewConfigurationType>::make_fill(count, (XrViewConfigurationType)0);
-		xrEnumerateViewConfigurations(xr_instance, xr_system_id, count, &count, result.available_configs.data);
+		xrEnumerateViewConfigurations(instance, system_id, count, &count, result.available_configs.data);
 		result.available_config_names.resize(count);
 		for (size_t i = 0; i < count; i++) {
 			switch (result.available_configs[i]) {
@@ -416,19 +428,14 @@ xr_view_info_t openxr_load_view(XrViewConfigurationType view_config) {
 	table.tag       = display_tag_view;
 	table.column_count = 2;
 
-	if (!xr_instance_err && !xr_system_err) {
-		result.config_properties = { XR_TYPE_VIEW_CONFIGURATION_PROPERTIES };
-		XrResult error = xrGetViewConfigurationProperties(xr_instance, xr_system_id, result.current_config, &result.config_properties);
-		if (XR_FAILED(error)) {
-			table.error = openxr_result_string(error);
-		} else {
-			table.cols[0].add({"fovMutable"}); table.cols[1].add({new_string("%s", result.config_properties.fovMutable ? "True" : "False")});
-		}
+	result.config_properties = { XR_TYPE_VIEW_CONFIGURATION_PROPERTIES };
+	XrResult error = xrGetViewConfigurationProperties(instance, system_id, result.current_config, &result.config_properties);
+	if (XR_FAILED(error)) {
+		table.error = openxr_result_string(error);
 	} else {
-		if (xr_system_err)   table.error = "No XrSystemId available";
-		if (xr_instance_err) table.error = "No XrInstance available";
+		table.cols[0].add({"fovMutable"}); table.cols[1].add({new_string("%s", result.config_properties.fovMutable ? "True" : "False")});
 	}
-	xr_tables.add(table);
+	tables->add(table);
 
 	// Load view configuration
 
@@ -439,97 +446,98 @@ xr_view_info_t openxr_load_view(XrViewConfigurationType view_config) {
 	table.tag       = display_tag_view;
 	table.column_count = 2;
 
-	if (!xr_instance_err && !xr_system_err) {
-		uint32_t count = 0;
-		XrResult error = xrEnumerateViewConfigurationViews(xr_instance, xr_system_id, result.current_config, 0, &count, nullptr);
-		result.config_views = array_t<XrViewConfigurationView>::make_fill(count, { XR_TYPE_VIEW_CONFIGURATION_VIEW });
-		xrEnumerateViewConfigurationViews(xr_instance, xr_system_id, result.current_config, count, &count, result.config_views.data);
+	uint32_t count = 0;
+	error = xrEnumerateViewConfigurationViews(instance, system_id, result.current_config, 0, &count, nullptr);
+	result.config_views = array_t<XrViewConfigurationView>::make_fill(count, { XR_TYPE_VIEW_CONFIGURATION_VIEW });
+	xrEnumerateViewConfigurationViews(instance, system_id, result.current_config, count, &count, result.config_views.data);
 
-		if (XR_FAILED(error)) {
-			table.error = openxr_result_string(error);
-		} else {
-			for (uint32_t i = 0; i < result.config_views.count; i++) {
-				table.cols[0].add({new_string("View %u", i)         }); table.cols[1].add({""});
-				table.cols[0].add({"recommendedImageRectWidth"      }); table.cols[1].add({new_string("%u", result.config_views[i].recommendedImageRectWidth)});
-				table.cols[0].add({"recommendedImageRectHeight"     }); table.cols[1].add({new_string("%u", result.config_views[i].recommendedImageRectHeight)});
-				table.cols[0].add({"recommendedSwapchainSampleCount"}); table.cols[1].add({new_string("%u", result.config_views[i].recommendedSwapchainSampleCount)});
-				table.cols[0].add({"maxImageRectWidth"              }); table.cols[1].add({new_string("%u", result.config_views[i].maxImageRectWidth)});
-				table.cols[0].add({"maxImageRectHeight"             }); table.cols[1].add({new_string("%u", result.config_views[i].maxImageRectHeight)});
-				table.cols[0].add({"maxSwapchainSampleCount"        }); table.cols[1].add({new_string("%u", result.config_views[i].maxSwapchainSampleCount)});
-			}
-		}
+	if (XR_FAILED(error)) {
+		table.error = openxr_result_string(error);
 	} else {
-		if (xr_system_err)   table.error = "No XrSystemId available";
-		if (xr_instance_err) table.error = "No XrInstance available";
+		for (uint32_t i = 0; i < result.config_views.count; i++) {
+			table.cols[0].add({new_string("View %u", i)         }); table.cols[1].add({""});
+			table.cols[0].add({"recommendedImageRectWidth"      }); table.cols[1].add({new_string("%u", result.config_views[i].recommendedImageRectWidth)});
+			table.cols[0].add({"recommendedImageRectHeight"     }); table.cols[1].add({new_string("%u", result.config_views[i].recommendedImageRectHeight)});
+			table.cols[0].add({"recommendedSwapchainSampleCount"}); table.cols[1].add({new_string("%u", result.config_views[i].recommendedSwapchainSampleCount)});
+			table.cols[0].add({"maxImageRectWidth"              }); table.cols[1].add({new_string("%u", result.config_views[i].maxImageRectWidth)});
+			table.cols[0].add({"maxImageRectHeight"             }); table.cols[1].add({new_string("%u", result.config_views[i].maxImageRectHeight)});
+			table.cols[0].add({"maxSwapchainSampleCount"        }); table.cols[1].add({new_string("%u", result.config_views[i].maxSwapchainSampleCount)});
+		}
 	}
-	xr_tables.add(table);
+	tables->add(table);
 	return result;
 }
 
 ///////////////////////////////////////////
 
-void openxr_load_enums(xr_settings_t settings) {
+void openxr_load_enums(XrInstance instance, XrSystemId system_id, xr_settings_t settings, array_t<xr_enum_info_t> misc_enums, array_t<display_table_t>* tables, const char** session_err) {
 	// Check if any of the enums need a session
-	if (!xr_session_err && settings.allow_session) {
-		bool requires_session = false;
-		for (size_t i = 0; i < xr_misc_enums.count; i++) {
-			requires_session = requires_session || xr_misc_enums[i].requires_session;
+	XrSession session = XR_NULL_HANDLE;
+	bool requires_session = false;
+	for (size_t i = 0; i < misc_enums.count; i++) {
+		if (misc_enums[i].requires_session) {
+			requires_session = true;
+			break;
 		}
-		if (requires_session) {
-			openxr_init_session();
-		}
-	} else if (!xr_session_err) {
-		xr_session_err = "Reload with Session enabled";
 	}
 
-	for (size_t i = 0; i < xr_misc_enums.count; i++) {
-		xr_misc_enums[i].items.clear();
+	if (requires_session && settings.allow_session == true) {
+		session = openxr_init_session(instance, system_id, &xr_session_err);
+	}
+	if (requires_session && settings.allow_session == false) {
+		*session_err = "Enable 'Create XrSession'";
+	}
+
+	for (size_t i = 0; i < misc_enums.count; i++) {
+		xr_enum_info_t *e = &misc_enums[i];
+		e->items.clear();
 
 		display_table_t table = {};
-		table.name_func = xr_misc_enums[i].source_fn_name;
-		table.name_type = xr_misc_enums[i].source_type_name;
-		table.spec      = xr_misc_enums[i].spec_link;
-		table.tag       = xr_misc_enums[i].tag;
+		table.name_func = e->source_fn_name;
+		table.name_type = e->source_type_name;
+		table.spec      = e->spec_link;
+		table.tag       = e->tag;
 		table.column_count = 1;
 
-		if ((!xr_misc_enums[i].requires_session  || !xr_session_err ) &&
-			(!xr_misc_enums[i].requires_instance || !xr_instance_err) &&
-			(!xr_misc_enums[i].requires_system   || !xr_system_err  )) {
+		if ((!e->requires_session  || session   != XR_NULL_HANDLE) &&
+			(!e->requires_instance || instance  != XR_NULL_HANDLE) &&
+			(!e->requires_system   || system_id != XR_NULL_SYSTEM_ID)) {
 
-			XrResult error = xr_misc_enums[i].load_info(&xr_misc_enums[i], settings);
+			XrResult error = e->load_info(instance, system_id, session, e, settings);
 
-			for (size_t e = 0; e < xr_misc_enums[i].items.count; e++) {
-				table.cols[0].add({ xr_misc_enums[i].items[e] });
+			for (size_t t = 0; t < e->items.count; t++) {
+				table.cols[0].add({ e->items[t] });
 			}
 			if (XR_FAILED(error)) {
 				table.error = openxr_result_string(error);
 			}
 		} else {
-
-			if      (xr_misc_enums[i].requires_instance && xr_instance_err) table.error = "No XrInstance available";
-			else if (xr_misc_enums[i].requires_system   && xr_system_err  ) table.error = "No XrSystemId available";
-			else if (xr_misc_enums[i].requires_session  && xr_session_err ) table.error = "No XrSession available";
+			if      (e->requires_instance && instance  == XR_NULL_HANDLE   ) table.error = "No XrInstance available";
+			else if (e->requires_system   && system_id == XR_NULL_SYSTEM_ID) table.error = "No XrSystemId available";
+			else if (e->requires_session  && session   == XR_NULL_HANDLE   ) table.error = "No XrSession available";
 		}
 
-		xr_tables.add(table);
+		tables->add(table);
 	}
+	if (session != XR_NULL_HANDLE)
+		xrDestroySession(session);
 }
 
 ///////////////////////////////////////////
 
-void openxr_register_enums() {
-	xr_misc_enums.clear();
+array_t<xr_enum_info_t> openxr_register_enums() {
+	array_t<xr_enum_info_t> misc_enums = {};
 
 	xr_enum_info_t info = { "xrEnumerateReferenceSpaces" };
 	info.source_type_name = "XrReferenceSpaceType";
 	info.spec_link        = "reference-spaces";
 	info.requires_session = true;
 	info.tag              = display_tag_misc;
-	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
+	info.load_info        = [](XrInstance instance, XrSystemId system_id, XrSession session, xr_enum_info_t *ref_info, xr_settings_t settings) {
 		uint32_t count = 0;
-		XrResult error = xrEnumerateReferenceSpaces(xr_session, 0, &count, nullptr);
+		XrResult error = xrEnumerateReferenceSpaces(session, 0, &count, nullptr);
 		array_t<XrReferenceSpaceType> items(count, (XrReferenceSpaceType)0);
-		xrEnumerateReferenceSpaces(xr_session, count, &count, items.data);
+		xrEnumerateReferenceSpaces(session, count, &count, items.data);
 		for (size_t i = 0; i < items.count; i++) {
 			switch (items[i]) {
 #define CASE_GET_NAME(e, val) case e: ref_info->items.add( #e ); break;
@@ -540,16 +548,15 @@ void openxr_register_enums() {
 		items.free();
 		return error;
 	};
-	xr_misc_enums.add(info);
+	misc_enums.add(info);
 
-	
 	info = { "xrEnumerateEnvironmentBlendModes" };
 	info.source_type_name = "XrEnvironmentBlendMode";
 	info.spec_link        = "XrEnvironmentBlendMode";
 	info.requires_instance= true;
 	info.requires_system  = true;
 	info.tag              = display_tag_view;
-	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
+	info.load_info        = [](XrInstance instance, XrSystemId system_id, XrSession session, xr_enum_info_t *ref_info, xr_settings_t settings) {
 		if (settings.view_config == 0) {
 			if (xr_view.available_configs.count > 0) {
 				settings.view_config = xr_view.available_configs[0];
@@ -557,9 +564,9 @@ void openxr_register_enums() {
 		}
 
 		uint32_t count = 0;
-		XrResult error = xrEnumerateEnvironmentBlendModes(xr_instance, xr_system_id, settings.view_config, 0, &count, nullptr);
+		XrResult error = xrEnumerateEnvironmentBlendModes(instance, system_id, settings.view_config, 0, &count, nullptr);
 		array_t<XrEnvironmentBlendMode> items(count, (XrEnvironmentBlendMode)0);
-		xrEnumerateEnvironmentBlendModes(xr_instance, xr_system_id, settings.view_config, count, &count, items.data);
+		xrEnumerateEnvironmentBlendModes(instance, system_id, settings.view_config, count, &count, items.data);
 
 		for (size_t i = 0; i < count; i++) {
 			switch (items[i]) {
@@ -571,18 +578,18 @@ void openxr_register_enums() {
 		items.free();
 		return error;
 	};
-	xr_misc_enums.add(info);
+	misc_enums.add(info);
 
 	info = { "xrEnumerateSwapchainFormats" };
 	info.source_type_name = "skg_tex_fmt_";
 	info.spec_link        = "xrEnumerateSwapchainFormats";
 	info.requires_session = true;
 	info.tag              = display_tag_misc;
-	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
+	info.load_info        = [](XrInstance instance, XrSystemId system_id, XrSession session, xr_enum_info_t *ref_info, xr_settings_t settings) {
 		uint32_t count = 0;
-		XrResult error = xrEnumerateSwapchainFormats(xr_session, 0, &count, nullptr);
+		XrResult error = xrEnumerateSwapchainFormats(session, 0, &count, nullptr);
 		array_t<int64_t> formats(count, 0);
-		xrEnumerateSwapchainFormats(xr_session, count, &count, formats.data);
+		xrEnumerateSwapchainFormats(session, count, &count, formats.data);
 
 		for (size_t i = 0; i < formats.count; i++) {
 			skg_tex_fmt_ format = skg_tex_fmt_from_native(formats[i]);
@@ -609,7 +616,7 @@ void openxr_register_enums() {
 		formats.free();
 		return error;
 	};
-	xr_misc_enums.add(info);
+	misc_enums.add(info);
 
 	info = { "xrEnumerateColorSpacesFB" };
 	info.source_type_name = "XrColorSpaceFB";
@@ -617,15 +624,15 @@ void openxr_register_enums() {
 	info.requires_session = true;
 	info.requires_instance= true;
 	info.tag              = display_tag_misc;
-	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
+	info.load_info        = [](XrInstance instance, XrSystemId system_id, XrSession session, xr_enum_info_t *ref_info, xr_settings_t settings) {
 		PFN_xrEnumerateColorSpacesFB xrEnumerateColorSpacesFB;
-		XrResult error = xrGetInstanceProcAddr(xr_instance, "xrEnumerateColorSpacesFB", (PFN_xrVoidFunction *)(&xrEnumerateColorSpacesFB));
+		XrResult error = xrGetInstanceProcAddr(instance, "xrEnumerateColorSpacesFB", (PFN_xrVoidFunction *)(&xrEnumerateColorSpacesFB));
 		if (XR_FAILED(error)) return error;
 
 		uint32_t count = 0;
-		error = xrEnumerateColorSpacesFB(xr_session, 0, &count, nullptr);
+		error = xrEnumerateColorSpacesFB(session, 0, &count, nullptr);
 		array_t<XrColorSpaceFB> color_spaces(count, (XrColorSpaceFB)0);
-		xrEnumerateColorSpacesFB(xr_session, count, &count, color_spaces.data);
+		xrEnumerateColorSpacesFB(session, count, &count, color_spaces.data);
 
 		for (size_t i = 0; i < color_spaces.count; i++) {
 			switch (color_spaces[i]) {
@@ -637,7 +644,7 @@ void openxr_register_enums() {
 		color_spaces.free();
 		return error;
 	};
-	xr_misc_enums.add(info);
+	misc_enums.add(info);
 
 	info = { "xrEnumerateDisplayRefreshRatesFB" };
 	info.source_type_name = "float";
@@ -645,15 +652,15 @@ void openxr_register_enums() {
 	info.requires_session = true;
 	info.requires_instance= true;
 	info.tag              = display_tag_misc;
-	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
+	info.load_info        = [](XrInstance instance, XrSystemId system_id, XrSession session, xr_enum_info_t *ref_info, xr_settings_t settings) {
 		PFN_xrEnumerateDisplayRefreshRatesFB xrEnumerateDisplayRefreshRatesFB;
-		XrResult error = xrGetInstanceProcAddr(xr_instance, "xrEnumerateDisplayRefreshRatesFB", (PFN_xrVoidFunction *)(&xrEnumerateDisplayRefreshRatesFB));
+		XrResult error = xrGetInstanceProcAddr(instance, "xrEnumerateDisplayRefreshRatesFB", (PFN_xrVoidFunction *)(&xrEnumerateDisplayRefreshRatesFB));
 		if (XR_FAILED(error)) return error;
 
 		uint32_t count = 0;
-		error = xrEnumerateDisplayRefreshRatesFB(xr_session, 0, &count, nullptr);
+		error = xrEnumerateDisplayRefreshRatesFB(session, 0, &count, nullptr);
 		array_t<float> refresh_rates(count, 0);
-		xrEnumerateDisplayRefreshRatesFB(xr_session, count, &count, refresh_rates.data);
+		xrEnumerateDisplayRefreshRatesFB(session, count, &count, refresh_rates.data);
 
 		for (size_t i = 0; i < refresh_rates.count; i++) {
 			ref_info->items.add({ new_string("%f", refresh_rates[i])});
@@ -661,7 +668,7 @@ void openxr_register_enums() {
 		refresh_rates.free();
 		return error;
 	};
-	xr_misc_enums.add(info);
+	misc_enums.add(info);
 
 	info = { "xrEnumerateRenderModelPathsFB" };
 	info.source_type_name = "XrRenderModelPathInfoFB";
@@ -669,15 +676,15 @@ void openxr_register_enums() {
 	info.requires_session = true;
 	info.requires_instance= true;
 	info.tag              = display_tag_misc;
-	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
+	info.load_info        = [](XrInstance instance, XrSystemId system_id, XrSession session, xr_enum_info_t *ref_info, xr_settings_t settings) {
 		PFN_xrEnumerateRenderModelPathsFB xrEnumerateRenderModelPathsFB;
 		XrResult error = xrGetInstanceProcAddr(xr_instance, "xrEnumerateRenderModelPathsFB", (PFN_xrVoidFunction *)(&xrEnumerateRenderModelPathsFB));
 		if (XR_FAILED(error)) return error;
 
 		uint32_t count = 0;
-		error = xrEnumerateRenderModelPathsFB(xr_session, 0, &count, nullptr);
+		error = xrEnumerateRenderModelPathsFB(session, 0, &count, nullptr);
 		array_t<XrRenderModelPathInfoFB> model_paths(count, XrRenderModelPathInfoFB{ XR_TYPE_RENDER_MODEL_PATH_INFO_FB });
-		xrEnumerateRenderModelPathsFB(xr_session, count, &count, model_paths.data);
+		xrEnumerateRenderModelPathsFB(session, count, &count, model_paths.data);
 
 		for (size_t i = 0; i < model_paths.count; i++) {
 			ref_info->items.add({ openxr_path_string(model_paths[i].path) });
@@ -685,22 +692,22 @@ void openxr_register_enums() {
 		model_paths.free();
 		return error;
 	};
-	xr_misc_enums.add(info);
+	misc_enums.add(info);
 
 	info = { "xrEnumerateViveTrackerPathsHTCX" };
 	info.source_type_name = "XrViveTrackerPathsHTCX";
 	info.spec_link        = "XrViveTrackerPathsHTCX";
 	info.requires_instance= true;
 	info.tag              = display_tag_misc;
-	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
+	info.load_info        = [](XrInstance instance, XrSystemId system_id, XrSession session, xr_enum_info_t *ref_info, xr_settings_t settings) {
 		PFN_xrEnumerateViveTrackerPathsHTCX xrEnumerateViveTrackerPathsHTCX;
-		XrResult error = xrGetInstanceProcAddr(xr_instance, "xrEnumerateViveTrackerPathsHTCX", (PFN_xrVoidFunction *)(&xrEnumerateViveTrackerPathsHTCX));
+		XrResult error = xrGetInstanceProcAddr(instance, "xrEnumerateViveTrackerPathsHTCX", (PFN_xrVoidFunction *)(&xrEnumerateViveTrackerPathsHTCX));
 		if (XR_FAILED(error)) return error;
 
 		uint32_t count = 0;
-		error = xrEnumerateViveTrackerPathsHTCX(xr_instance, 0, &count, nullptr);
+		error = xrEnumerateViveTrackerPathsHTCX(instance, 0, &count, nullptr);
 		array_t<XrViveTrackerPathsHTCX> tracker_paths(count, XrViveTrackerPathsHTCX{ XR_TYPE_VIVE_TRACKER_PATHS_HTCX });
-		xrEnumerateViveTrackerPathsHTCX(xr_instance, count, &count, tracker_paths.data);
+		xrEnumerateViveTrackerPathsHTCX(instance, count, &count, tracker_paths.data);
 
 		// TODO: This needs labels for persistentPath and rolePath, but the current
 		// structure doens't exactly allow for this.
@@ -711,22 +718,22 @@ void openxr_register_enums() {
 		tracker_paths.free();
 		return error;
 	};
-	xr_misc_enums.add(info);
+	misc_enums.add(info);
 
 	info = { "xrEnumeratePerformanceMetricsCounterPathsMETA" };
 	info.source_type_name = "XrPath";
 	info.spec_link        = "xrEnumeratePerformanceMetricsCounterPathsMETA";
 	info.requires_instance= true;
 	info.tag              = display_tag_misc;
-	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
+	info.load_info        = [](XrInstance instance, XrSystemId system_id, XrSession session, xr_enum_info_t *ref_info, xr_settings_t settings) {
 		PFN_xrEnumeratePerformanceMetricsCounterPathsMETA xrEnumeratePerformanceMetricsCounterPathsMETA;
-		XrResult error = xrGetInstanceProcAddr(xr_instance, "xrEnumeratePerformanceMetricsCounterPathsMETA", (PFN_xrVoidFunction *)(&xrEnumeratePerformanceMetricsCounterPathsMETA));
+		XrResult error = xrGetInstanceProcAddr(instance, "xrEnumeratePerformanceMetricsCounterPathsMETA", (PFN_xrVoidFunction *)(&xrEnumeratePerformanceMetricsCounterPathsMETA));
 		if (XR_FAILED(error)) return error;
 
 		uint32_t count = 0;
-		error = xrEnumeratePerformanceMetricsCounterPathsMETA(xr_instance, 0, &count, nullptr);
+		error = xrEnumeratePerformanceMetricsCounterPathsMETA(instance, 0, &count, nullptr);
 		array_t<XrPath> metric_paths(count, {});
-		xrEnumeratePerformanceMetricsCounterPathsMETA(xr_instance, count, &count, metric_paths.data);
+		xrEnumeratePerformanceMetricsCounterPathsMETA(instance, count, &count, metric_paths.data);
 
 		for (size_t i = 0; i < metric_paths.count; i++) {
 			ref_info->items.add({ openxr_path_string(metric_paths[i]) });
@@ -734,7 +741,7 @@ void openxr_register_enums() {
 		metric_paths.free();
 		return error;
 	};
-	xr_misc_enums.add(info);
+	misc_enums.add(info);
 
 	info = { "xrEnumerateReprojectionModesMSFT" };
 	info.source_type_name = "XrReprojectionModeMSFT";
@@ -742,15 +749,15 @@ void openxr_register_enums() {
 	info.requires_system  = true;
 	info.requires_instance= true;
 	info.tag              = display_tag_misc;
-	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
+	info.load_info        = [](XrInstance instance, XrSystemId system_id, XrSession session, xr_enum_info_t *ref_info, xr_settings_t settings) {
 		PFN_xrEnumerateReprojectionModesMSFT xrEnumerateReprojectionModesMSFT;
-		XrResult error = xrGetInstanceProcAddr(xr_instance, "xrEnumerateReprojectionModesMSFT", (PFN_xrVoidFunction *)(&xrEnumerateReprojectionModesMSFT));
+		XrResult error = xrGetInstanceProcAddr(instance, "xrEnumerateReprojectionModesMSFT", (PFN_xrVoidFunction *)(&xrEnumerateReprojectionModesMSFT));
 		if (XR_FAILED(error)) return error;
 
 		uint32_t count = 0;
-		error = xrEnumerateReprojectionModesMSFT(xr_instance, xr_system_id, xr_view.current_config, 0, &count, nullptr);
+		error = xrEnumerateReprojectionModesMSFT(instance, system_id, xr_view.current_config, 0, &count, nullptr);
 		array_t<XrReprojectionModeMSFT> reprojection_modes(count, (XrReprojectionModeMSFT)0);
-		xrEnumerateReprojectionModesMSFT(xr_instance, xr_system_id, xr_view.current_config, count, &count, reprojection_modes.data);
+		xrEnumerateReprojectionModesMSFT(instance, system_id, xr_view.current_config, count, &count, reprojection_modes.data);
 
 		for (size_t i = 0; i < reprojection_modes.count; i++) {
 			switch (reprojection_modes[i]) {
@@ -762,7 +769,7 @@ void openxr_register_enums() {
 		reprojection_modes.free();
 		return error;
 	};
-	xr_misc_enums.add(info);
+	misc_enums.add(info);
 
 	info = { "xrEnumerateSceneComputeFeaturesMSFT" };
 	info.source_type_name = "XrSceneComputeFeatureMSFT";
@@ -770,15 +777,15 @@ void openxr_register_enums() {
 	info.requires_system  = true;
 	info.requires_instance= true;
 	info.tag              = display_tag_misc;
-	info.load_info        = [](xr_enum_info_t *ref_info, xr_settings_t settings) {
+	info.load_info        = [](XrInstance instance, XrSystemId system_id, XrSession session, xr_enum_info_t *ref_info, xr_settings_t settings) {
 		PFN_xrEnumerateSceneComputeFeaturesMSFT xrEnumerateSceneComputeFeaturesMSFT;
-		XrResult error = xrGetInstanceProcAddr(xr_instance, "xrEnumerateSceneComputeFeaturesMSFT", (PFN_xrVoidFunction *)(&xrEnumerateSceneComputeFeaturesMSFT));
+		XrResult error = xrGetInstanceProcAddr(instance, "xrEnumerateSceneComputeFeaturesMSFT", (PFN_xrVoidFunction *)(&xrEnumerateSceneComputeFeaturesMSFT));
 		if (XR_FAILED(error)) return error;
 
 		uint32_t count = 0;
-		error = xrEnumerateSceneComputeFeaturesMSFT(xr_instance, xr_system_id, 0, &count, nullptr);
+		error = xrEnumerateSceneComputeFeaturesMSFT(instance, system_id, 0, &count, nullptr);
 		array_t<XrSceneComputeFeatureMSFT> compute_features(count, (XrSceneComputeFeatureMSFT)0);
-		xrEnumerateSceneComputeFeaturesMSFT(xr_instance, xr_system_id, count, &count, compute_features.data);
+		xrEnumerateSceneComputeFeaturesMSFT(instance, system_id, count, &count, compute_features.data);
 
 		for (size_t i = 0; i < compute_features.count; i++) {
 			switch (compute_features[i]) {
@@ -790,5 +797,7 @@ void openxr_register_enums() {
 		compute_features.free();
 		return error;
 	};
-	xr_misc_enums.add(info);
+	misc_enums.add(info);
+
+	return misc_enums;
 }

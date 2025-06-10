@@ -7,9 +7,8 @@ set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 #### OpenXR - https://www.khronos.org/openxr/ ####
 CPMAddPackage(
   NAME OpenXR
-  VERSION 1.1.47
   GITHUB_REPOSITORY KhronosGroup/OpenXR-SDK
-  GIT_TAG 858912260ca616f4c23f7fb61c89228c353eb124 # v1.1.47
+  GIT_TAG release-1.1.49
 )
 
 if (UNIX)
@@ -42,6 +41,8 @@ add_executable(openxr-explorer
     app_imgui.h
     app_imgui.cpp
     array.h
+    ferr_thread.cpp
+    ferr_thread.h
     imgui/imconfig.h
     imgui/imgui.h
     imgui/imgui.cpp

@@ -6,9 +6,10 @@ const char *runtime_default_list = R"_(
 #
 # Format is:
 # [OS id: windows|linux] [name, no space] [path to runtime manifest, spaces are ok]
+# Steam and Oculus properly add themselves to the registry, and are auto-discovered now
+# windows Oculus C:\Program Files\Oculus\Support\oculus-runtime\oculus_openxr_64.json
+# windows SteamVR C:\Program Files (x86)\Steam\steamapps\common\SteamVR\steamxr_win64.json
 windows WMR C:\WINDOWS\system32\MixedRealityRuntime.json
-windows Oculus C:\Program Files\Oculus\Support\oculus-runtime\oculus_openxr_64.json
-windows SteamVR C:\Program Files (x86)\Steam\steamapps\common\SteamVR\steamxr_win64.json
 windows Varjo C:\Program Files\Varjo\varjo-openxr\VarjoOpenXR.json
 windows ViveOpenXR C:\Program Files (x86)\VIVE\Updater\App\ViveVRRuntime\ViveVR_openxr\ViveOpenXR.json
 windows VirtualDesktopXRBundled C:\Program Files\Virtual Desktop Streamer\OpenXR\virtualdesktop-openxr-32.json

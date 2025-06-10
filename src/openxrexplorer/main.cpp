@@ -4,6 +4,8 @@
 #include "xrruntime.h"
 #include "openxr_info.h"
 
+#include "ferr_thread.h"
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -14,6 +16,8 @@
 const char*   app_name        = "OpenXR Explorer";
 const char*   app_id          = "openxr-explorer";
 xr_settings_t app_xr_settings = {};
+bool          app_reloading   = false;
+ft_mutex_t    app_lock        = {};
 
 runtime_t *runtimes      = nullptr;
 int32_t    runtime_count = 0;
@@ -26,6 +30,7 @@ void app_window_view();
 void app_window_misc();
 void app_element_table(const display_table_t *table);
 
+void app_info_reload   ();
 void app_set_runtime   (int32_t runtime_index);
 void app_open_link     (const char *link);
 void app_open_spec     (const char *spec_item_name);
@@ -76,12 +81,15 @@ bool app_init() {
 	colors[ImGuiCol_TableRowBgAlt] = barely;
 	colors[ImGuiCol_TabUnfocusedActive] = colors[ImGuiCol_Separator] = midsat;
  
+	app_lock = ft_mutex_create();
+
 	load_runtimes(runtime_config_path(), &runtimes, &runtime_count);
 
 	app_xr_settings.allow_session = false;
 	app_xr_settings.form          = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
-	openxr_info_reload(app_xr_settings);
-	
+
+	app_info_reload();
+
 	return true;
 }
 
@@ -89,6 +97,8 @@ bool app_init() {
 
 void app_shutdown() {
 	openxr_info_release();
+
+	ft_mutex_destroy(&app_lock);
 }
 
 ///////////////////////////////////////////
@@ -111,11 +121,13 @@ void app_step(ImVec2 canvas_size) {
 		ImGui::DockBuilderFinish(dockspace_id);
 	}
 
+	ft_mutex_lock(app_lock);
 	app_window_openxr_functionality();
 	app_window_runtime();
 	app_window_view();
 	app_window_misc();
 	//ImGui::ShowDemoWindow();
+	ft_mutex_unlock(app_lock);
 }
 
 ///////////////////////////////////////////
@@ -123,7 +135,7 @@ void app_step(ImVec2 canvas_size) {
 void app_window_runtime() {
 	static int32_t current_runtime = -1;
 
-	ImGui::Begin("Runtime Information");
+	ImGui::Begin("Runtime Information", NULL, ImGuiWindowFlags_AlwaysVerticalScrollbar);
 
 	ImGui::Text("OpenXR Loader v%d.%d.%d", 
 		(int32_t)XR_VERSION_MAJOR(XR_CURRENT_API_VERSION),
@@ -145,6 +157,7 @@ void app_window_runtime() {
 			bool is_selected = (current_runtime == n);
 			if (ImGui::Selectable(runtimes[n].name, is_selected) && current_runtime != n) {
 				current_runtime = n;
+
 				app_set_runtime(current_runtime);
 			}
 			if (is_selected)
@@ -153,9 +166,11 @@ void app_window_runtime() {
 		ImGui::EndCombo();
 	}
 	
+	ImGui::BeginDisabled(app_reloading);
 	if (ImGui::Button("Reload runtime data")) {
-		openxr_info_reload(app_xr_settings);
+		app_info_reload();
 	}
+	ImGui::EndDisabled();
 	ImGui::SameLine();
 	ImGui::Checkbox("Create XrSession", &app_xr_settings.allow_session);
 
@@ -182,10 +197,13 @@ void app_window_runtime() {
 	ImGui::Spacing();
 	ImGui::Separator();
 
+	if (app_reloading)
+		ImGui::Text("LOADING...");
+
 	if (xr_instance_err || xr_system_err || xr_session_err) {
-		if (xr_instance_err) ImGui::Text("xrCreateInstance error: %s", xr_instance_err);
-		if (xr_system_err  ) ImGui::Text("xrGetSystem error: %s", xr_system_err);
-		if (xr_session_err ) ImGui::Text("xrCreateSession error: %s", xr_session_err);
+		if (xr_instance_err) { ImGui::AlignTextToFramePadding(); ImGui::Text("No XrInstance - xrCreateInstance [%s]", xr_instance_err); }
+		if (xr_system_err  ) { ImGui::AlignTextToFramePadding(); ImGui::Text("No XrSystemId - xrGetSystem [%s]",      xr_system_err  ); }
+		if (xr_session_err ) { ImGui::AlignTextToFramePadding(); ImGui::Text("No XrSession  - xrCreateSession [%s]",  xr_session_err ); }
 		ImGui::Spacing();
 		ImGui::Separator();
 	}
@@ -201,7 +219,7 @@ void app_window_runtime() {
 ///////////////////////////////////////////
 
 void app_window_openxr_functionality() {
-	ImGui::Begin("Extensions & Layers");
+	ImGui::Begin("Extensions & Layers", NULL, ImGuiWindowFlags_AlwaysVerticalScrollbar);
 
 	for (size_t i = 0; i < xr_tables.count; i++) {
 		if (xr_tables[i].tag == display_tag_features)
@@ -214,7 +232,7 @@ void app_window_openxr_functionality() {
 ///////////////////////////////////////////
 
 void app_window_view() {
-	ImGui::Begin("View Configuration");
+	ImGui::Begin("View Configuration", NULL, ImGuiWindowFlags_AlwaysVerticalScrollbar);
 
 	const char *config_string = "N/A";
 	if (app_xr_settings.view_config == (XrViewConfigurationType)0)
@@ -231,7 +249,7 @@ void app_window_view() {
 			bool is_selected = (app_xr_settings.view_config == xr_view.available_configs[n]);
 			if (ImGui::Selectable(xr_view.available_config_names[n], is_selected)) {
 				app_xr_settings.view_config = xr_view.available_configs[n];
-				openxr_info_reload(app_xr_settings);
+				app_info_reload();
 			}
 			if (is_selected)
 				ImGui::SetItemDefaultFocus();
@@ -252,7 +270,7 @@ void app_window_view() {
 ///////////////////////////////////////////
 
 void app_window_misc() {
-	ImGui::Begin("Misc Enumerations");
+	ImGui::Begin("Misc Enumerations", NULL, ImGuiWindowFlags_AlwaysVerticalScrollbar);
 
 	for (size_t i = 0; i < xr_tables.count; i++) {
 		if (xr_tables[i].tag == display_tag_misc)
@@ -347,6 +365,18 @@ void app_element_table(const display_table_t *table) {
 
 ///////////////////////////////////////////
 
+void app_info_reload() {
+	if (app_reloading) return;
+	app_reloading = true;
+	ft_thread_create([](void*) {
+		openxr_info_reload(app_xr_settings, &app_lock);
+		app_reloading = false;
+		return 1;
+	}, nullptr);
+}
+
+///////////////////////////////////////////
+
 #if defined(_WIN32)
 
 #define WIN32_LEAN_AND_MEAN
@@ -372,7 +402,7 @@ void app_set_runtime(int32_t runtime_index) {
 		WaitForSingleObject(info.hProcess, INFINITE);
 		CloseHandle(info.hProcess);
 
-		openxr_info_reload(app_xr_settings);
+		app_info_reload();
 	}
 }
 

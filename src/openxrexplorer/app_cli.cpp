@@ -30,7 +30,7 @@ void app_cli(int32_t arg_count, const char **args) {
 
 	if (!skg_init("OpenXR Explorer", nullptr))
 		printf("Failed to init skg!\n");
-	openxr_info_reload(settings);
+	openxr_info_reload(settings, NULL);
 	if (xr_instance_err) printf("XrInstance error: [%s]\n", xr_instance_err);
 	if (xr_system_err)   printf("XrSystemId error: [%s]\n", xr_system_err);
 	if (xr_session_err)  printf("XrSession error: [%s]\n", xr_session_err);
