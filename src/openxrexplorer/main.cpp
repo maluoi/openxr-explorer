@@ -443,6 +443,6 @@ void app_open_link(const char *link) {
 
 void app_open_spec(const char *spec_item_name) {
 	char buffer[1024];
-	snprintf(buffer, sizeof(buffer), "https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html#%s", spec_item_name);
+	snprintf(buffer, sizeof(buffer), "https://www.khronos.org/registry/OpenXR/specs/1.1/html/xrspec.html#%s", spec_item_name);
 	app_open_link(buffer);
 }
